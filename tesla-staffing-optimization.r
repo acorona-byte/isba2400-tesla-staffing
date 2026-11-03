@@ -83,10 +83,6 @@
 
 data_path <- file.path("data", "tesla_staffing_inputs.csv")
 
-if (!file.exists(data_path)) {
-  stop("Could not find data/tesla_staffing_inputs.csv")
-}
-
 demand <- read.csv(
   data_path,
   stringsAsFactors = FALSE
