@@ -1,8 +1,8 @@
-block_id,time_block,start_hour_24,end_hour_24,calls_per_hour,hours_per_block,calls_per_block,non_english_share,english_share,english_calls_per_hour,non_english_calls_per_hour,spanish_share_model_assumption,spanish_calls_per_hour_assumed,agent_capacity_calls_per_hour,agent_capacity_calls_per_2hr_block,wage_rate_per_call_hour,cost_per_agent_2hr_call_block,ft_start_allowed,pt_start_allowed,language_assumption_note
-1,7 AM - 9 AM,7,9,40,2,80,0.2,0.8,32.0,8.0,0.2,8.0,6,12,30,60,1,0,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-2,9 AM - 11 AM,9,11,85,2,170,0.2,0.8,68.0,17.0,0.2,17.0,6,12,30,60,1,0,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-3,11 AM - 1 PM,11,13,70,2,140,0.2,0.8,56.0,14.0,0.2,14.0,6,12,30,60,1,0,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-4,1 PM - 3 PM,13,15,95,2,190,0.2,0.8,76.0,19.0,0.2,19.0,6,12,30,60,1,0,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-5,3 PM - 5 PM,15,17,80,2,160,0.2,0.8,64.0,16.0,0.2,16.0,6,12,30,60,1,1,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-6,5 PM - 7 PM,17,19,35,2,70,0.2,0.8,28.0,7.0,0.2,7.0,6,12,45,90,0,1,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
-7,7 PM - 9 PM,19,21,10,2,20,0.2,0.8,8.0,2.0,0.2,2.0,6,12,45,90,0,0,"ASSUMPTION: treat all 20% non-English demand as Spanish for the model; confirm with instructor/team because the case says non-English, then staffs Spanish-speaking FT agents."
+block_id,time_block,start_hour,end_hour,calls_per_hour
+1,7 AM - 9 AM,7,9,40
+2,9 AM - 11 AM,9,11,85
+3,11 AM - 1 PM,11,13,70
+4,1 PM - 3 PM,13,15,95
+5,3 PM - 5 PM,15,17,80
+6,5 PM - 7 PM,17,19,35
+7,7 PM - 9 PM,19,21,10
