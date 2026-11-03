@@ -72,7 +72,7 @@
 # in the case.
 #
 # Expected file:
-#   data/tesla_call_demand.csv
+#   data/tesla_staffing_inputs.csv
 #
 # Expected columns:
 #   block_id
@@ -81,10 +81,10 @@
 #   end_hour
 #   calls_per_hour
 
-data_path <- file.path("data", "tesla_call_demand.csv")
+data_path <- file.path("data", "tesla_staffing_inputs.csv")
 
 if (!file.exists(data_path)) {
-  stop("Could not find data/tesla_call_demand.csv")
+  stop("Could not find data/tesla_staffing_inputs.csv")
 }
 
 demand <- read.csv(
