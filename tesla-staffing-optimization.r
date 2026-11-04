@@ -261,7 +261,14 @@ print(
 #   - language
 #   - full-time call pattern
 #   - part-time shift
+
+# The optimization model will choose these staffing quantities so that:
 #
+#   1. Customer demand is fully covered
+#   2. Scheduling rules are satisfied
+#   3. Language requirements are satisfied
+#   4. Total labor cost is minimized
+
 # We will define these variables once the coverage matrix is constructed.
 
 
@@ -302,10 +309,13 @@ print(
 
 # In the baseline scenario, part-time agents speak English only.
 
+# Therefore, part-time agents cannot be used to satisfy Spanish-language
+# demand in the baseline model
+
 
 # ----- Restricted-start scenario -----
 
-# For the later scenario:
+# These limits apply only to the later restricted-start scenario:
 #
 # No more than one qualified English-speaking full-time agent
 # may begin work at 1 PM.
@@ -316,6 +326,9 @@ max_english_ft_start_1pm <- 1
 # may begin work at 3 PM.
 
 max_english_ft_start_3pm <- 1
+
+# The actual mathematical constraints will be added after the staffing
+# coverage matrix and decision variables have been constructed
 
 
 
@@ -338,17 +351,11 @@ max_english_ft_start_3pm <- 1
 #
 #   $45 per call-handling hour
 
+# When the staffing coverage matrix is constructed, each staffing
+# pattern will also be assigned its corresponding call-handling cost.
 
-# Example:
-#
-# A part-time agent starting at 3 PM handles calls from:
-#
-#   3 PM - 5 PM  -> 2 hours × $30 = $60
-#   5 PM - 7 PM  -> 2 hours × $45 = $90
-#
-# Total relevant salary cost:
-#
-#   $150
+# These costs will then be used in the objective function to determine
+# the lowest-cost feasible staffing plan.
 
 
 
@@ -362,7 +369,9 @@ max_english_ft_start_3pm <- 1
 
 # Objective:
 #
-#   Minimize Total Call-Handling Labor Cost
+#   Minimize Total Call-Handling Labor Cost as:
+#
+#   Total Cost = Sum of (Staffing Option Cost x Number of Employees Assigned)
 #
 # Subject to:
 #
@@ -372,7 +381,10 @@ max_english_ft_start_3pm <- 1
 #   Part-time scheduling rules
 #   Shift-start restrictions
 #   Nonnegative integer staffing levels
-
+#
+# The actual mathematical objective function will be created after the
+# staffing coverage matrix, staffing costs, and decision variables
+# have been constructed.
 
 
 # -----------------------------------------------------------------------------
@@ -391,6 +403,93 @@ max_english_ft_start_3pm <- 1
 #   - Spanish-speaking full-time agents
 #   - English-speaking part-time agents
 # -----------------------------------------------------------------------------
+
+
+
+# ----- 9A. Build Staffing Options -----
+
+# Gvie the five permitted full-time start periods readable names.
+
+# The numbers correspond to the demand blocks:
+
+#   Block 1 = 7 AM
+#   Block 2 = 9 AM
+#   Block 3 = 11 AM
+#   Block 4 = 1 PM
+#   Block 5 = 3 PM
+
+ft_start_names <- c(
+  "7AM",
+  "9AM",
+  "11AM",
+  "1PM",
+  "3PM"
+)
+
+# Define the two valid full-time call patterns.
+
+# 1 = employee is handling calls
+# 0 = employee is performing other duties
+
+ft_pattern_A <- c(1, 0, 1, 0)
+
+ft_pattern_B <- c(0, 1, 0, 1)
+
+# Define the one valid part-time call pattern
+
+pt_pattern <- c(1, 1)
+
+
+
+# ----- 9B. Build Coverage Matrix -----
+
+# The coverage matrix shows which two-hour demand periods are covered
+# by each valid staffing option.
+
+# 1 = employee is handling calls during that period
+# 0 = employee is not handling calls during that period
+
+# Columns correspond to:
+
+#   1 = 7 AM - 9 AM
+#   2 = 9 AM - 11 AM
+#   3 = 11 AM - 1 PM
+#   4 = 1 PM - 3 PM
+#   5 = 3 PM - 5 PM
+#   6 = 5 PM - 7 PM
+#   7 = 7 PM - 9 PM
+
+coverage_matrix <- rbind(
+
+    # Full-time agents starting at 7 AM
+    ft_7am_a = c(1, 0, 1, 0, 0, 0, 0),
+    ft_7am_b = c(0, 1, 0, 1, 0, 0, 0),
+
+    # Full-time agents starting at 9 AM
+    
+)
+
+# ----- 9C. Assign Cost to Each Staffing Option -----
+
+
+
+
+# ----- 9D. Define Baseline Decision Variables -----
+
+
+
+
+# ----- 9E. Solve Baseline Optmization Model -----
+
+
+
+
+# ----- 9F. Validate Baseline Solution -----
+
+
+
+
+
 
 
 
