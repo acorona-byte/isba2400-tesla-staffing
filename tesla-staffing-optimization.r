@@ -64,6 +64,27 @@
 
 
 
+# =============================================================================
+# REQUIRED PACKAGE
+# =============================================================================
+#
+# This project uses the lpSolve package for integer linear optimization.
+#
+# If lpSolve is not already installed, run this once in the R console:
+#
+# install.packages("lpSolve")
+#
+# The script will stop with a clear message if the package is missing.
+# =============================================================================
+
+if (!requireNamespace("lpSolve", quietly = TRUE)) {
+  stop(
+    "Package 'lpSolve' is required. Run install.packages('lpSolve') once."
+  )
+}
+
+
+
 # -----------------------------------------------------------------------------
 # 1. LOAD RAW CASE DATA
 # -----------------------------------------------------------------------------
@@ -111,12 +132,10 @@ hours_per_block <- 2
 # Average call-handling capacity.
 calls_per_agent_hour <- 6
 
-
 # ----- Language demand -----
 
 # The case states that 20% of calls come from non-English speakers.
 non_english_share <- 0.20
-
 
 # ----- Full-time agents -----
 
@@ -138,7 +157,6 @@ ft_rotation_hours <- 2
 #   7 AM, 9 AM, 11 AM, 1 PM, or 3 PM.
 ft_start_blocks <- c(1, 2, 3, 4, 5)
 
-
 # ----- Part-time agents -----
 
 # Part-time agents work continuously on calls for 4 hours.
@@ -146,7 +164,6 @@ pt_shift_hours <- 4
 
 # Part-time agents speak English only in the baseline case.
 pt_start_blocks <- c(5, 6)   # 3 PM or 5 PM
-
 
 # ----- Wage rates -----
 
@@ -174,13 +191,11 @@ spanish_share <- non_english_share
 
 english_share <- 1 - spanish_share
 
-
 # ASSUMPTION 2:
 #
 # The case does not provide a different language mix for each time block.
 # We therefore apply the 20% Spanish / 80% English mix uniformly
 # across all forecast periods.
-
 
 # Additional assumptions should be documented here before being introduced
 # into the optimization model.
@@ -199,26 +214,21 @@ english_share <- 1 - spanish_share
 demand$calls_per_block <-
   demand$calls_per_hour * hours_per_block
 
-
 # English-language demand.
 demand$english_calls_per_hour <-
   demand$calls_per_hour * english_share
-
 
 # Spanish-language demand.
 demand$spanish_calls_per_hour <-
   demand$calls_per_hour * spanish_share
 
-
 # English-language calls per two-hour block.
 demand$english_calls_per_block <-
   demand$english_calls_per_hour * hours_per_block
 
-
 # Spanish-language calls per two-hour block.
 demand$spanish_calls_per_block <-
   demand$spanish_calls_per_hour * hours_per_block
-
 
 cat("\n============================================================\n")
 cat("DEMAND BY LANGUAGE\n")
@@ -244,7 +254,6 @@ print(
 # Pattern:
 #
 #   CALL → OFF → CALL → OFF
-#
 #
 # Part-time agents work:
 #
@@ -277,7 +286,6 @@ print(
 # The optimization model must satisfy the following requirements.
 # -----------------------------------------------------------------------------
 
-
 # ----- Demand coverage -----
 
 # English-speaking call capacity must meet or exceed English call demand
@@ -285,7 +293,6 @@ print(
 
 # Spanish-speaking call capacity must meet or exceed Spanish call demand
 # in every two-hour period.
-
 
 # ----- Full-time scheduling -----
 
@@ -295,7 +302,6 @@ print(
 # Full-time agents alternate every two hours between call duties
 # and their other responsibilities
 
-
 # ----- Part-time scheduling -----
 
 # Part-time agents handle calls continuously for four hours.
@@ -304,7 +310,6 @@ print(
 
 # Therefore, part-time agents cannot be used to satisfy Spanish-language
 # demand in the baseline model
-
 
 # ----- Restricted-start scenario -----
 
@@ -378,6 +383,7 @@ max_english_ft_start_3pm <- 1
 # The actual mathematical objective function will be created after the
 # staffing coverage matrix, staffing costs, and decision variables
 # have been constructed.
+
 
 
 # -----------------------------------------------------------------------------
@@ -499,10 +505,7 @@ print(coverage_matrix)
 
 # 2 hours x $45 = $90
 
-
-
 cost_per_option <- c(
-
   # Full-time agents starting at 7 AM
   ft_7am = 2 * wage_before_5pm + 2 * wage_before_5pm,
 
@@ -521,7 +524,6 @@ cost_per_option <- c(
   # Part-time agents
   pt_3pm = 2 * wage_before_5pm + 2 * wage_after_5pm,
   pt_5pm = 2 * wage_after_5pm + 2 * wage_after_5pm
-
 )
 
 # Print each staffing option and its associated cost.
@@ -570,7 +572,6 @@ spanish_ft_vars <- paste0(
   ft_options
 )
 
-
 # Create the English-speaking part-time decision variables.
 
 english_pt_vars <- paste0(
@@ -617,6 +618,151 @@ print(
 
 # ----- 9E. Solve Baseline Optmization Model -----
 
+# Each active agent handles 6 calls per hour.
+# Therefore, during a two-hour block, one active agent can handle:
+
+agent_capacity_per_block <-
+  calls_per_agent_hour * hours_per_block
+
+# Build English Capacity Constraints
+
+# English demand can be covered by:
+
+#   - English-speaking full-time agents
+#   - English-speaking part-time agents
+
+english_ft_coverage <-
+  t(coverage_matrix[ft_options, , drop = FALSE]) *
+    agent_capacity_per_block
+
+english_pt_coverage <- 
+  t(coverage_matrix[pt_options, , drop = FALSE]) *
+    agent_capacity_per_block
+
+# Create zero columns for staffing groups that cannot serve
+# a particular language
+
+zero_ft <- matrix(
+  0,
+  nrow = nrow(demand),
+  ncol = length(ft_options)
+)
+
+zero_pt <- matrix(
+  0,
+  nrow = nrow(demand),
+  ncol = length(pt_options)
+)
+
+# Decision-variable order:
+
+# English FT | Spanish FT | English PT
+
+english_constraints <- cbind(
+  english_ft_coverage,
+  zero_ft,
+  english_pt_coverage
+)
+
+# Build Spanish Capacity Constraints
+
+# Spanish demand can only be covered by Spanish-speaking
+# full-time agents in the baseline scenario.
+
+spanish_ft_coverage <-
+  t(coverage_matrix[ft_options, , drop = FALSE]) *
+  agent_capacity_per_block
+
+spanish_constraints <- cbind(
+  zero_ft,
+  spanish_ft_coverage,
+  zero_pt
+)
+
+# Combine all demand constraints
+
+# Seven English constraints + seven Spanish constraints
+# gives fourteen total baseline demand constraints.
+
+constraint_matrix <- rbind(
+  english_constraints,
+  spanish_constraints
+)
+
+colnames(constraint_matrix) <- decision_names
+
+rownames(constraint_matrix) <- c(
+  paste0("ENG_", demand$time_block),
+  paste0("SPA_", demand$time_block)
+)
+
+# Every capacity constraint must meet or exceed demand.
+
+constraint_directions <-
+  rep(">=", nrow(constraint_matrix))
+
+
+# Right-hand side of the constraints:
+# required English calls followed by Spanish calls.
+
+constraint_rhs <- c(
+  demand$english_calls_per_block,
+  demand$spanish_calls_per_block
+)
+
+# Solve the optimization model
+
+baseline_model <- lpSolve::lp(
+  direction = "min",
+  objective.in = as.numeric(baseline_costs),
+  const.mat = constraint_matrix,
+  const.dir = constraint_directions,
+  const.rhs = constraint_rhs,
+  all.int = TRUE
+)
+
+# A status of 0 indicates that an optimal solution was found.
+
+if(baseline_model$status != 0) {
+  stop("Baseline optimization did not return an optimal solution.")
+}
+
+# Attatch readable names to the staffing solution.
+
+baseline_solution <- baseline_model$solution
+
+names(baseline_solution) <- decision_names
+
+# Build a readable results table.
+
+baseline_results <- data.frame(
+  decision_variable = decision_names,
+  agents = baseline_solution,
+  cost_per_agent = as.numeric(baseline_costs),
+  total_cost = baseline_solution * as.numeric(baseline_costs),
+  row.names = NULL
+)
+
+cat("\n============================================================\n")
+cat("BASELINE OPTIMAL STAFFING PLAN\n")
+cat("============================================================\n\n")
+
+print(
+  baseline_results[
+    baseline_results$agents > 0,
+  ]
+)
+
+
+cat(
+  "\nMinimum baseline operating cost: $",
+  format(
+    round(baseline_model$objval, 2),
+    nsmall = 2
+  ),
+  "\n",
+  sep = ""
+)
 
 
 
