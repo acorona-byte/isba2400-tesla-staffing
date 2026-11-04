@@ -782,6 +782,156 @@ cat(
 #   D. What is the resulting minimum cost?
 # -----------------------------------------------------------------------------
 
+# ----- 10A. Build Restricted-Start Constraints -----
+
+# Create a constraint for English-speaking full-time agents
+# starting at 1 PM.
+#
+# Conceptually:
+#
+#   eng_ft_1pm <= 1
+
+restricted_1pm <- rep(
+  0,
+  length(decision_names)
+)
+
+names(restricted_1pm) <- decision_names
+
+restricted_1pm["eng_ft_1pm"] <- 1
+
+
+# Create a constraint for English-speaking full-time agents
+# starting at 3 PM.
+#
+# Conceptually:
+#
+#   eng_ft_3pm <= 1
+
+restricted_3pm <- rep(
+  0,
+  length(decision_names)
+)
+
+names(restricted_3pm) <- decision_names
+
+restricted_3pm["eng_ft_3pm"] <- 1
+
+
+# ----- 10B. Add Restrictions to Baseline Constraints -----
+
+# Keep all fourteen baseline demand constraints and add
+# the two restricted-start constraints.
+
+restricted_constraint_matrix <- rbind(
+  constraint_matrix,
+  restricted_1pm,
+  restricted_3pm
+)
+
+
+rownames(restricted_constraint_matrix)[15:16] <- c(
+  "MAX_ENG_FT_1PM",
+  "MAX_ENG_FT_3PM"
+)
+
+
+# Baseline demand constraints use >=.
+#
+# The two new staffing limits use <=.
+
+restricted_constraint_directions <- c(
+  constraint_directions,
+  "<=",
+  "<="
+)
+
+
+# Add the maximum permitted staffing values to the
+# right-hand side.
+
+restricted_constraint_rhs <- c(
+  constraint_rhs,
+  max_english_ft_start_1pm,
+  max_english_ft_start_3pm
+)
+
+
+# Verify the restricted model dimensions.
+#
+# 14 demand constraints + 2 staffing restrictions = 16 constraints.
+
+stopifnot(
+  nrow(restricted_constraint_matrix) == 16,
+  ncol(restricted_constraint_matrix) == 12,
+  length(restricted_constraint_directions) == 16,
+  length(restricted_constraint_rhs) == 16
+)
+
+
+# ----- 10C. Solve Restricted-Start Model -----
+
+restricted_model <- lpSolve::lp(
+  direction = "min",
+  objective.in = as.numeric(baseline_costs),
+  const.mat = restricted_constraint_matrix,
+  const.dir = restricted_constraint_directions,
+  const.rhs = restricted_constraint_rhs,
+  all.int = TRUE
+)
+
+
+# A status of 0 indicates that an optimal solution was found.
+
+if (restricted_model$status != 0) {
+  stop(
+    "Restricted-start optimization did not return an optimal solution."
+  )
+}
+
+
+# Attach readable names to the optimized staffing solution.
+
+restricted_solution <- restricted_model$solution
+
+names(restricted_solution) <- decision_names
+
+
+# Build a readable staffing table.
+
+restricted_results <- data.frame(
+  decision_variable = decision_names,
+  agents = restricted_solution,
+  cost_per_agent = as.numeric(baseline_costs),
+  total_cost =
+    restricted_solution * as.numeric(baseline_costs),
+  row.names = NULL
+)
+
+
+cat("\n============================================================\n")
+cat("RESTRICTED-START OPTIMAL STAFFING PLAN\n")
+cat("============================================================\n\n")
+
+print(
+  restricted_results[
+    restricted_results$agents > 0,
+  ]
+)
+
+
+# ----- Question D: Minimum Operating Cost -----
+
+cat(
+  "\nMinimum restricted-start operating cost: $",
+  format(
+    round(restricted_model$objval, 2),
+    nsmall = 2
+  ),
+  "\n",
+  sep = ""
+)
+
 
 
 # -----------------------------------------------------------------------------
@@ -799,6 +949,151 @@ cat(
 #   F. What is the resulting minimum operating cost?
 # -----------------------------------------------------------------------------
 
+# ----- 11A. Define Bilingual Decision Variables -----
+
+# Because every agent is bilingual, separate English and Spanish
+# staffing variables are no longer necessary.
+#
+# We now need only one decision variable for each valid
+# full-time or part-time staffing option.
+
+bilingual_decision_names <- paste0(
+  "bil_",
+  rownames(coverage_matrix)
+)
+
+
+# Each bilingual staffing option has the same schedule cost
+# used in the previous scenarios.
+
+bilingual_costs <- cost_per_option
+
+names(bilingual_costs) <- bilingual_decision_names
+
+
+cat("\n============================================================\n")
+cat("BILINGUAL DECISION VARIABLES\n")
+cat("============================================================\n\n")
+
+print(
+  data.frame(
+    decision_variable = bilingual_decision_names,
+    cost = bilingual_costs,
+    row.names = NULL
+  )
+)
+
+
+# ----- 11B. Build Bilingual Capacity Constraints -----
+
+# Since all agents are bilingual, any active agent can handle
+# any customer call.
+#
+# Therefore, language-specific demand constraints are removed.
+#
+# The model only needs:
+#
+#   Total Call Capacity >= Total Call Demand
+
+
+bilingual_constraint_matrix <-
+  t(coverage_matrix) * agent_capacity_per_block
+
+
+colnames(bilingual_constraint_matrix) <-
+  bilingual_decision_names
+
+
+rownames(bilingual_constraint_matrix) <-
+  demand$time_block
+
+
+# Every capacity constraint must meet or exceed total demand.
+
+bilingual_constraint_directions <-
+  rep(">=", nrow(demand))
+
+
+# Total demand for each two-hour period.
+
+bilingual_constraint_rhs <-
+  demand$calls_per_block
+
+
+# Verify the model dimensions.
+#
+# Seven demand periods and seven staffing decisions.
+
+stopifnot(
+  nrow(bilingual_constraint_matrix) == 7,
+  ncol(bilingual_constraint_matrix) == 7,
+  length(bilingual_constraint_rhs) == 7
+)
+
+
+# ----- 11C. Solve Bilingual Optimization Model -----
+
+bilingual_model <- lpSolve::lp(
+  direction = "min",
+  objective.in = as.numeric(bilingual_costs),
+  const.mat = bilingual_constraint_matrix,
+  const.dir = bilingual_constraint_directions,
+  const.rhs = bilingual_constraint_rhs,
+  all.int = TRUE
+)
+
+
+# A status of 0 indicates that an optimal solution was found.
+
+if (bilingual_model$status != 0) {
+  stop(
+    "Bilingual optimization did not return an optimal solution."
+  )
+}
+
+
+# Attach readable names to the staffing solution.
+
+bilingual_solution <- bilingual_model$solution
+
+names(bilingual_solution) <- bilingual_decision_names
+
+
+# Build a readable results table.
+
+bilingual_results <- data.frame(
+  decision_variable = bilingual_decision_names,
+  agents = bilingual_solution,
+  cost_per_agent = as.numeric(bilingual_costs),
+  total_cost =
+    bilingual_solution * as.numeric(bilingual_costs),
+  row.names = NULL
+)
+
+
+cat("\n============================================================\n")
+cat("BILINGUAL OPTIMAL STAFFING PLAN\n")
+cat("============================================================\n\n")
+
+print(
+  bilingual_results[
+    bilingual_results$agents > 0,
+  ]
+)
+
+
+# ----- Question F: Minimum Operating Cost -----
+
+cat(
+  "\nMinimum bilingual operating cost: $",
+  format(
+    round(bilingual_model$objval, 2),
+    nsmall = 2
+  ),
+  "\n",
+  sep = ""
+)
+
 
 
 # -----------------------------------------------------------------------------
@@ -812,30 +1107,48 @@ cat(
 # Result should be reported as a percentage rounded to one decimal place.
 # -----------------------------------------------------------------------------
 
+# The baseline model represents the monolingual workforce.
+
+monolingual_cost <- baseline_model$objval
 
 
-# -----------------------------------------------------------------------------
-# 13. VALIDATION
-# -----------------------------------------------------------------------------
+# The bilingual model represents the minimum operating cost when
+# all agents are bilingual at the original wage rates.
+
+bilingual_cost <- bilingual_model$objval
+
+
+# Let p represent the maximum proportional wage premium.
 #
-# Before accepting any optimization result, verify:
+# At the break-even point:
 #
-#   1. Every demand block is fully covered.
+#   bilingual_cost * (1 + p) = monolingual_cost
 #
-#   2. English demand is covered.
+# Therefore:
 #
-#   3. Spanish demand is covered.
-#
-#   4. Full-time rotation patterns are respected.
-#
-#   5. Part-time scheduling rules are respected.
-#
-#   6. Restricted-start limits are satisfied where applicable.
-#
-#   7. Staffing decisions are nonnegative integers.
-#
-#   8. Reported cost equals independently recalculated labor cost.
-# -----------------------------------------------------------------------------
+#   p = (monolingual_cost / bilingual_cost) - 1
+
+max_bilingual_premium <-
+  (monolingual_cost / bilingual_cost) - 1
+
+
+# Convert the proportional premium to a percentage.
+
+max_bilingual_premium_pct <-
+  max_bilingual_premium * 100
+
+
+cat("\n============================================================\n")
+cat("BILINGUAL WAGE PREMIUM\n")
+cat("============================================================\n\n")
+
+
+cat(
+  "Maximum bilingual wage premium: ",
+  round(max_bilingual_premium_pct, 1),
+  "%\n",
+  sep = ""
+)
 
 
 
