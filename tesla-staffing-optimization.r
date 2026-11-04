@@ -408,7 +408,7 @@ max_english_ft_start_3pm <- 1
 
 # ----- 9A. Build Staffing Options -----
 
-# Gvie the five permitted full-time start periods readable names.
+# Give the five permitted full-time start periods readable names.
 
 # The numbers correspond to the demand blocks:
 
@@ -431,9 +431,9 @@ ft_start_names <- c(
 # 1 = employee is handling calls
 # 0 = employee is performing other duties
 
-ft_pattern_A <- c(1, 0, 1, 0)
+ft_pattern_a <- c(1, 0, 1, 0)
 
-ft_pattern_B <- c(0, 1, 0, 1)
+ft_pattern_b <- c(0, 1, 0, 1)
 
 # Define the one valid part-time call pattern
 
@@ -466,11 +466,94 @@ coverage_matrix <- rbind(
     ft_7am_b = c(0, 1, 0, 1, 0, 0, 0),
 
     # Full-time agents starting at 9 AM
-    
+    ft_9am_a = c(0, 1, 0, 1, 0, 0, 0),
+    ft_9am_b = c(0, 0, 1, 0, 1, 0, 0),
+
+    # Full-time agents starting at 11 AM
+    ft_11am_a = c(0, 0, 1, 0, 1, 0, 0),
+    ft_11am_b = c(0, 0, 0, 1, 0, 1, 0),
+
+    # Full-time agents starting at 1 PM
+    ft_1pm_a = c(0, 0, 0, 1, 0, 1, 0),
+    ft_1pm_b = c(0, 0, 0, 0, 1, 0, 1),
+
+    # Full-time agents starting at 3 PM
+    ft_3pm_a = c(0, 0, 0, 0, 1, 0,1),
+
+    # Pattern B also handles calls from 9 PM - 11 PM.
+    # That period is outside the demand horizon for this case.
+    # therefore, only the 5 PM - 7 PM call block appears here.
+    ft_3pm_b = c(0, 0, 0, 0, 0, 1, 0),
+
+    # Part-time agents
+    pt_3pm = c(0, 0, 0, 0, 1, 1, 0),
+    pt_5pm = c(0, 0, 0, 0, 0, 1, 1)
+
 )
+
+# Give the matrix columns readable names using the time periods
+# that are already stored in the demand data.
+
+colnames(coverage_matrix) <- demand$time_block
+
+# Print the matrix so that we can verify the schedule
+
+cat("\n============================================================\n")
+cat("STAFFING COVERAGE MATRIX\n")
+cat("============================================================\n\n")
+
+print(coverage_matrix)
 
 # ----- 9C. Assign Cost to Each Staffing Option -----
 
+# Each staffing option is assigned the salary cost associated with
+# the periods during which that employee is handling calls.
+
+# Each two- hour call block before 5 PM costs:
+
+# 2 hours x $30 = $60
+
+# Each two-hour call block after 5 PM costs:calls_per_block
+
+# 2 hours x $45 = $90
+
+
+
+cost_per_option <- c(
+
+  # Full-time agents starting at 7 AM
+  ft_7am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
+  ft_7am_b = 2 * wage_before_5pm + 2 * wage_before_5pm,
+
+  # Full-time agents starting at 9 AM
+  ft_9am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
+  ft_9am_b = 2 * wage_before_5pm + 2 * wage_before_5pm,
+
+    # Full-time agents starting at 11 AM
+  ft_11am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
+  ft_11am_b = 2 * wage_before_5pm + 2 * wage_after_5pm,
+
+  # Full-time agents starting at 1 PM
+  ft_1pm_a = 2 * wage_before_5pm + 2 * wage_after_5pm,
+  ft_1pm_b = 2 * wage_before_5pm + 2 * wage_after_5pm,
+
+  # Full-time agents starting at 3 PM
+  ft_3pm_a = 2 * wage_before_5pm + 2 * wage_after_5pm,
+  ft_3pm_b = 2 * wage_after_5pm + 2 * wage_after_5pm,
+
+  # Part-time agents
+  pt_3pm = 2 * wage_before_5pm + 2 * wage_after_5pm,
+  pt_5pm = 2 * wage_after_5pm + 2 * wage_after_5pm
+
+)
+
+# Print each staffing option and its associated cost.
+
+cat("\n============================================================\n")
+cat("COST PER STAFFING OPTION\n")
+cat("============================================================\n\n")
+
+print(cost_per_option)
 
 
 
