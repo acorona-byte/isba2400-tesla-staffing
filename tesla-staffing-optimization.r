@@ -1,7 +1,7 @@
 # =============================================================================
 # ISBA 2400 - Mathematics for Business Analytics
 # Tesla Case Project
-# Driving Innovations: Optimization of Support Staffing at Tesla
+# Driving Innovations: Optimization of Staffing at Tesla
 #
 # Team:
 #   Abel
@@ -89,8 +89,8 @@ demand <- read.csv(
 )
 
 cat("\n============================================================\n")
-cat("TESLA SUPPORT STAFFING CASE\n")
-cat("RAW DEMAND DATA LOADED\n")
+cat("TESLA STAFFING CASE\n")
+cat("RAW DEMAND DATA\n")
 cat("============================================================\n\n")
 
 print(demand)
@@ -218,7 +218,7 @@ demand$spanish_calls_per_block <-
 
 
 cat("\n============================================================\n")
-cat("DERIVED DEMAND BY LANGUAGE\n")
+cat("DEMAND BY LANGUAGE\n")
 cat("============================================================\n\n")
 
 print(
