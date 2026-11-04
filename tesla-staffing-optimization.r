@@ -239,7 +239,7 @@ print(
 # 5. STAFFING PATTERNS / DECISION VARIABLES
 # -----------------------------------------------------------------------------
 #
-# Full-time agents may follow one of two alternating patterns:
+# Full-time agents may follow the alternating pattern:
 #
 # Pattern:
 #
@@ -293,8 +293,7 @@ print(
 # and always begin their shift handling calls.
 
 # Full-time agents alternate every two hours between call duties
-# and their other responsibilities.
-
+# and their other responsibilities
 
 
 # ----- Part-time scheduling -----
@@ -420,7 +419,7 @@ ft_start_names <- c(
   "3PM"
 )
 
-# Define the two valid full-time call patterns.
+# Define the full-time call patterns.
 
 # 1 = employee is handling calls
 # 0 = employee is performing other duties
@@ -496,7 +495,7 @@ print(coverage_matrix)
 
 # 2 hours x $30 = $60
 
-# Each two-hour call block after 5 PM costs:calls_per_block
+# Each two-hour call block after 5 PM costs:
 
 # 2 hours x $45 = $90
 
@@ -544,7 +543,7 @@ print(cost_per_option)
 #   - an English-speaking full-time agent
 #   - a Spanish-speaking full-time agent
 
-# Part-time agents are English-speaking only in the baseline sc
+# Part-time agents are English-speaking only in the baseline scenario
 
 
 # ----- 9E. Solve Baseline Optmization Model -----
