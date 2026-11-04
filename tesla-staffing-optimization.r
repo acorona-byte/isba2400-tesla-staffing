@@ -768,11 +768,47 @@ cat(
 
 # ----- 9F. Validate Baseline Solution -----
 
+# Separate the optimized staffing solution into:
 
+#   - English full-time
+#   - Spanish full-time
+#   - English part-time
 
+english_ft_solution < - baseline_solution[english_ft_vars]
 
+spanish_ft_solution < - baseline_solution[spanish_ft_vars]
 
+english_pt_solution < - baseline_solution[english_pt_vars]
 
+# Recalculate English Capacity
+
+# Calculate the number of English-speaking agents actively handling
+# calls in each two-hour period.
+
+english_active_agents <-
+  as.numeric(
+    english_ft_solution[ft_options, , drop = FALSE]
+  ) +
+  as.numeric(
+    english_pt_solution %*%
+      coverage_matrix[pt_options, , drop = FALSE]
+  )
+
+# Convert active agents into call capacity.
+
+english_capacity <-
+  english_active_agents * agent_capacity_per_block
+
+# Recalculate Spanish Capacity
+
+# Spanish demand is covered only by Spanish-speaking full-time agents
+# in the baseline scenario.
+
+spanish_active_agents <-
+  as.numeric(
+    spanish_ft_solution %*%
+      coverage_matrix[ft_options, , drop = FALSE]
+  )
 
 
 # -----------------------------------------------------------------------------
