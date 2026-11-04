@@ -559,7 +559,14 @@ print(cost_per_option)
 
 # ----- 9D. Define Baseline Decision Variables -----
 
+# The baseline model distinguishes full-time staffing by language.
 
+# Each full-time staffing pattern can therefore be assigned to either:
+
+#   - an English-speaking full-time agent
+#   - a Spanish-speaking full-time agent
+
+# Part-time agents are English-speaking only in the baseline sc
 
 
 # ----- 9E. Solve Baseline Optmization Model -----
