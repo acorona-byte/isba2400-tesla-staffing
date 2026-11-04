@@ -120,6 +120,9 @@ non_english_share <- 0.20
 
 # ----- Full-time agents -----
 
+# Full-time agents always begin their shift handling calls.
+# They then alternate every 2 hours between calls and other duties.
+
 # Full-time agents work an 8-hour shift.
 ft_shift_hours <- 8
 
@@ -238,15 +241,10 @@ print(
 #
 # Full-time agents may follow one of two alternating patterns:
 #
-# Pattern A:
+# Pattern:
 #
 #   CALL → OFF → CALL → OFF
 #
-# Pattern B:
-#
-#   OFF → CALL → OFF → CALL
-#
-# Each pattern spans the employee's 8-hour shift.
 #
 # Part-time agents work:
 #
@@ -259,7 +257,6 @@ print(
 #
 #   - start time
 #   - language
-#   - full-time call pattern
 #   - part-time shift
 
 # The optimization model will choose these staffing quantities so that:
@@ -292,15 +289,12 @@ print(
 
 # ----- Full-time scheduling -----
 
-# Full-time agents work an 8-hour shift.
+# Full-time agents work an 8-hour shift 
+# and always begin their shift handling calls.
 
 # Full-time agents alternate every two hours between call duties
 # and their other responsibilities.
 
-# They may begin their shift either:
-#
-#   - handling calls
-#   - performing other duties
 
 
 # ----- Part-time scheduling -----
@@ -431,9 +425,7 @@ ft_start_names <- c(
 # 1 = employee is handling calls
 # 0 = employee is performing other duties
 
-ft_pattern_a <- c(1, 0, 1, 0)
-
-ft_pattern_b <- c(0, 1, 0, 1)
+ft_pattern <- c(1, 0, 1, 0)
 
 # Define the one valid part-time call pattern
 
@@ -462,28 +454,19 @@ pt_pattern <- c(1, 1)
 coverage_matrix <- rbind(
 
     # Full-time agents starting at 7 AM
-    ft_7am_a = c(1, 0, 1, 0, 0, 0, 0),
-    ft_7am_b = c(0, 1, 0, 1, 0, 0, 0),
+    ft_7am = c(1, 0, 1, 0, 0, 0, 0),
 
     # Full-time agents starting at 9 AM
-    ft_9am_a = c(0, 1, 0, 1, 0, 0, 0),
-    ft_9am_b = c(0, 0, 1, 0, 1, 0, 0),
+    ft_9am = c(0, 1, 0, 1, 0, 0, 0),
 
     # Full-time agents starting at 11 AM
-    ft_11am_a = c(0, 0, 1, 0, 1, 0, 0),
-    ft_11am_b = c(0, 0, 0, 1, 0, 1, 0),
+    ft_11am = c(0, 0, 1, 0, 1, 0, 0),
 
     # Full-time agents starting at 1 PM
-    ft_1pm_a = c(0, 0, 0, 1, 0, 1, 0),
-    ft_1pm_b = c(0, 0, 0, 0, 1, 0, 1),
+    ft_1pm = c(0, 0, 0, 1, 0, 1, 0),
 
     # Full-time agents starting at 3 PM
-    ft_3pm_a = c(0, 0, 0, 0, 1, 0,1),
-
-    # Pattern B also handles calls from 9 PM - 11 PM.
-    # That period is outside the demand horizon for this case.
-    # therefore, only the 5 PM - 7 PM call block appears here.
-    ft_3pm_b = c(0, 0, 0, 0, 0, 1, 0),
+    ft_3pm = c(0, 0, 0, 0, 1, 0, 1),
 
     # Part-time agents
     pt_3pm = c(0, 0, 0, 0, 1, 1, 0),
@@ -522,24 +505,19 @@ print(coverage_matrix)
 cost_per_option <- c(
 
   # Full-time agents starting at 7 AM
-  ft_7am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
-  ft_7am_b = 2 * wage_before_5pm + 2 * wage_before_5pm,
+  ft_7am = 2 * wage_before_5pm + 2 * wage_before_5pm,
 
   # Full-time agents starting at 9 AM
-  ft_9am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
-  ft_9am_b = 2 * wage_before_5pm + 2 * wage_before_5pm,
+  ft_9am = 2 * wage_before_5pm + 2 * wage_before_5pm,
 
     # Full-time agents starting at 11 AM
-  ft_11am_a = 2 * wage_before_5pm + 2 * wage_before_5pm,
-  ft_11am_b = 2 * wage_before_5pm + 2 * wage_after_5pm,
+  ft_11am = 2 * wage_before_5pm + 2 * wage_before_5pm,
 
   # Full-time agents starting at 1 PM
-  ft_1pm_a = 2 * wage_before_5pm + 2 * wage_after_5pm,
-  ft_1pm_b = 2 * wage_before_5pm + 2 * wage_after_5pm,
+  ft_1pm = 2 * wage_before_5pm + 2 * wage_after_5pm,
 
   # Full-time agents starting at 3 PM
-  ft_3pm_a = 2 * wage_before_5pm + 2 * wage_after_5pm,
-  ft_3pm_b = 2 * wage_after_5pm + 2 * wage_after_5pm,
+  ft_3pm = 2 * wage_before_5pm + 2 * wage_after_5pm,
 
   # Part-time agents
   pt_3pm = 2 * wage_before_5pm + 2 * wage_after_5pm,
