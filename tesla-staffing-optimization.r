@@ -545,6 +545,75 @@ print(cost_per_option)
 
 # Part-time agents are English-speaking only in the baseline scenario
 
+# Identify the full-time staffing options.
+
+ft_options <- rownames(coverage_matrix)[
+  grepl("^ft_", rownames(coverage_matrix))
+]
+
+# Identify the part-time staffing options.
+pt_options <- rownames(coverage_matrix)[
+  grepl("^pt_", rownames(coverage_matrix))
+]
+
+# Create the English-speaking full-time decision variables.
+
+english_ft_vars <- paste0(
+  "eng_",
+  ft_options
+)
+
+# Create the Spanish-speaking full-time decision variables.
+
+spanish_ft_vars <- paste0(
+  "spa_",
+  ft_options
+)
+
+
+# Create the English-speaking part-time decision variables.
+
+english_pt_vars <- paste0(
+  "eng_",
+  pt_options
+)
+
+# Combine all the baseline decision variables into one vector.
+
+decision_names <- c(
+  english_ft_vars,
+  spanish_ft_vars,
+  english_pt_vars
+)
+
+# Assign the corresponding staffing cost to each decision variable.
+
+# English and Spanish full-time agents have the same schedule costs.
+# Part-time agents use the part-time schedule costs.
+
+baseline_costs <- c(
+  cost_per_option[ft_options],
+  cost_per_option[ft_options],
+  cost_per_option[pt_options]
+)
+
+names(baseline_costs) <- decision_names
+
+# Print the baseline decision variables and their costs.
+
+cat("\n============================================================\n")
+cat("BASELINE DECISION VARIABLES\n")
+cat("============================================================\n\n")
+
+print(
+  data.frame(
+    decision_variable = decision_names,
+    cost = baseline_costs,
+    row.names = NULL
+  )
+)
+
+
 
 # ----- 9E. Solve Baseline Optmization Model -----
 
