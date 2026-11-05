@@ -1289,22 +1289,3 @@ cat("DEMAND GROWTH SENSITIVITY\n")
 cat("============================================================\n\n")
 
 print(growth_results)
-
-
-
-# -----------------------------------------------------------------------------
-# 14. OUTPUT / REPORTING
-# -----------------------------------------------------------------------------
-#
-# Produce readable outputs for the final report:
-#
-#   - Staffing by start time
-#   - Staffing by agent type
-#   - Demand versus available capacity by block
-#   - Total operating cost
-#   - Scenario comparison
-#   - Bilingual wage-premium sensitivity
-#
-# These outputs can later be exported to tables and charts for the
-# written report and presentation.
-# -----------------------------------------------------------------------------
