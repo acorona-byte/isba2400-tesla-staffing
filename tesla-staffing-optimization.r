@@ -1153,6 +1153,146 @@ cat(
 
 
 # -----------------------------------------------------------------------------
+# 13. MANAGERIAL EXTENSION - DEMAND GROWTH SENSITIVITY
+# -----------------------------------------------------------------------------
+#
+# This section tests how the optimal staffing plan changes if customer-support
+# demand increases while all staffing rules, language shares, productivity,
+# and wage rates remain unchanged.
+#
+# Growth scenarios:
+#
+#   - Current demand
+#   - +10%
+#   - +20%
+#   - +30%
+#
+# This is a sensitivity analysis, not a forecast.
+# -----------------------------------------------------------------------------
+
+
+# Define demand-growth scenarios.
+
+growth_rates <- c(
+  0.00,
+  0.10,
+  0.20,
+  0.30
+)
+
+
+# Create an empty results table.
+
+growth_results <- data.frame()
+
+
+# Solve the baseline staffing model for each growth scenario.
+
+for (g in growth_rates) {
+
+  # Increase English and Spanish demand proportionally.
+
+  growth_english_demand <-
+    demand$english_calls_per_block * (1 + g)
+
+  growth_spanish_demand <-
+    demand$spanish_calls_per_block * (1 + g)
+
+
+  # Build the new right-hand side.
+
+  growth_rhs <- c(
+    growth_english_demand,
+    growth_spanish_demand
+  )
+
+
+  # Solve the model using the same cost structure
+  # and staffing constraints as the baseline.
+
+  growth_model <- lpSolve::lp(
+    direction = "min",
+    objective.in = as.numeric(baseline_costs),
+    const.mat = constraint_matrix,
+    const.dir = constraint_directions,
+    const.rhs = growth_rhs,
+    all.int = TRUE
+  )
+
+
+  # Stop if any growth scenario is infeasible.
+
+  if (growth_model$status != 0) {
+    stop(
+      paste(
+        "Optimization failed for growth rate:",
+        g
+      )
+    )
+  }
+
+
+  # Store the optimized staffing solution.
+
+  growth_solution <- growth_model$solution
+
+  names(growth_solution) <- decision_names
+
+
+  # Calculate FT and PT totals.
+
+  growth_ft_total <-
+    sum(
+      growth_solution[
+        c(
+          english_ft_vars,
+          spanish_ft_vars
+        )
+      ]
+    )
+
+  growth_pt_total <-
+    sum(
+      growth_solution[
+        english_pt_vars
+      ]
+    )
+
+
+  # Add scenario results to the summary table.
+
+  growth_results <- rbind(
+    growth_results,
+    data.frame(
+      demand_growth_pct =
+        paste0(round(g * 100), "%"),
+
+      full_time_agents =
+        growth_ft_total,
+
+      part_time_agents =
+        growth_pt_total,
+
+      total_agents =
+        growth_ft_total +
+        growth_pt_total,
+
+      minimum_cost =
+        growth_model$objval
+    )
+  )
+}
+
+
+cat("\n============================================================\n")
+cat("DEMAND GROWTH SENSITIVITY\n")
+cat("============================================================\n\n")
+
+print(growth_results)
+
+
+
+# -----------------------------------------------------------------------------
 # 14. OUTPUT / REPORTING
 # -----------------------------------------------------------------------------
 #
