@@ -1289,3 +1289,2654 @@ cat("DEMAND GROWTH SENSITIVITY\n")
 cat("============================================================\n\n")
 
 print(growth_results)
+
+
+
+# =============================================================================
+# 12. SUMMARY OUTPUT
+# =============================================================================
+#
+# Purpose:
+#
+#   Produce the tables, charts, graphs, and summary calculations used in the
+#   Tesla support-staffing recommendation deck.
+#
+#   This section intentionally reuses the objects created earlier in the model
+#   rather than importing a second CSV.
+#
+#   Required objects from prior sections:
+#
+#     demand
+#     coverage_matrix
+#     cost_per_option
+#     baseline_solution
+#     baseline_costs
+#     baseline_model
+#     english_ft_vars
+#     spanish_ft_vars
+#     english_pt_vars
+#     restricted_solution
+#     restricted_model
+#     bilingual_solution
+#     bilingual_costs
+#     bilingual_model
+#     growth_results
+#     agent_capacity_per_block
+#
+#   External historical values used only for presentation context are defined
+#   below and cited directly in the code comments.
+#
+#   Output:
+#
+#     output/summary_output/png/*.png
+#     output/summary_output/summary_console_output.txt
+#
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# 12A. OUTPUT FOLDERS
+# -----------------------------------------------------------------------------
+
+summary_output_dir <-
+  file.path(
+    "output",
+    "summary_output"
+  )
+
+summary_png_dir <-
+  file.path(
+    summary_output_dir,
+    "png"
+  )
+
+dir.create(
+  summary_png_dir,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+
+# -----------------------------------------------------------------------------
+# 12B. DECK COLOR PALETTE
+# -----------------------------------------------------------------------------
+#
+# Colors sampled from the final PowerPoint deck.
+# -----------------------------------------------------------------------------
+
+tesla_red         <- "#E31937"
+tesla_dark        <- "#171A20"
+tesla_dark_gray   <- "#393C41"
+tesla_text_gray   <- "#5C5E62"
+tesla_mid_gray    <- "#8E8E8E"
+tesla_light_gray  <- "#DCDCDD"
+tesla_lighter_gray <- "#E5E5E6"
+tesla_background  <- "#FCFCFC"
+tesla_white       <- "#F4F4F4"
+
+
+# -----------------------------------------------------------------------------
+# 12C. EXTERNAL HISTORICAL CONTEXT
+# -----------------------------------------------------------------------------
+#
+# These values are NOT optimization inputs.
+#
+# They are included only to reproduce the historical / financial context used
+# in the presentation.
+#
+# References:
+#
+# Tesla, Inc. (2019). Form 10-K for fiscal year 2018.
+# U.S. Securities and Exchange Commission.
+#
+# Tesla, Inc. (2019, January 2).
+# Q4 2018 Vehicle Production & Deliveries.
+# Form 8-K, Exhibit 99.1.
+#
+# Tesla, Inc. (2019, January 30).
+# Fourth Quarter & Full Year 2018 Update.
+#
+# Paul Tan's Automotive News. (2019, January 31).
+# Tesla ended 2018 with a net loss of USD976 million.
+# -----------------------------------------------------------------------------
+
+
+# ----- Slide 4 historical context -----
+
+model_3_deliveries_2018 <- 145846
+
+total_revenue_2018_billion <- 21.5
+total_revenue_2017_billion <- 11.8
+
+net_loss_2018_million <- -976
+
+q3_profit_2018_million <- 312
+q4_profit_2018_million <- 140
+
+
+# ----- Scale-context values -----
+
+vehicle_deliveries_2017 <- 103122
+vehicle_deliveries_2018 <- 245240
+
+annualized_delivery_run_rate_start_2018 <- 120000
+annualized_delivery_run_rate_end_2018 <- 350000
+
+automotive_sales_revenue_2017_billion <- 8.5
+automotive_sales_revenue_2018_billion <- 17.6
+
+
+# ----- Presentation-only assumptions -----
+
+weekdays_per_year <- 260
+
+improved_calls_per_agent_hour <- 7
+
+
+# -----------------------------------------------------------------------------
+# 12D. HELPER FUNCTIONS
+# -----------------------------------------------------------------------------
+
+
+# Pull one named value from a solution vector.
+
+solution_value <- function(
+  solution,
+  variable_name
+) {
+
+  value <-
+    solution[
+      variable_name
+    ]
+
+  if (
+    length(value) == 0 ||
+    is.na(value)
+  ) {
+    return(0)
+  }
+
+  as.numeric(value)
+}
+
+
+# Render a presentation-style table to PNG.
+
+render_table_png <- function(
+  table_data,
+  file_name,
+  title,
+  column_widths = NULL,
+  font_size = 10
+) {
+
+  png(
+    filename = file.path(
+      summary_png_dir,
+      file_name
+    ),
+    width = 1600,
+    height = 900,
+    res = 144,
+    bg = tesla_background
+  )
+
+  grid::grid.newpage()
+
+  grid::grid.text(
+    title,
+    x = grid::unit(
+      0.03,
+      "npc"
+    ),
+    y = grid::unit(
+      0.94,
+      "npc"
+    ),
+    just = c(
+      "left",
+      "center"
+    ),
+    gp = grid::gpar(
+      col = tesla_dark,
+      fontsize = 24,
+      fontface = "bold"
+    )
+  )
+
+  n_body_rows <-
+    nrow(
+      table_data
+    )
+
+  n_rows <-
+    n_body_rows +
+    1
+
+  n_cols <-
+    ncol(
+      table_data
+    )
+
+  if (
+    is.null(
+      column_widths
+    )
+  ) {
+
+    column_widths <-
+      rep(
+        1 / n_cols,
+        n_cols
+      )
+  }
+
+  column_widths <-
+    column_widths /
+    sum(
+      column_widths
+    )
+
+  left <- 0.03
+  right <- 0.97
+  top <- 0.84
+  bottom <- 0.08
+
+  x_edges <-
+    left +
+    c(
+      0,
+      cumsum(
+        column_widths
+      )
+    ) *
+    (
+      right -
+      left
+    )
+
+  row_height <-
+    (
+      top -
+      bottom
+    ) /
+    n_rows
+
+
+  # Header row.
+
+  for (
+    column_index in seq_len(
+      n_cols
+    )
+  ) {
+
+    x0 <-
+      x_edges[
+        column_index
+      ]
+
+    x1 <-
+      x_edges[
+        column_index +
+        1
+      ]
+
+    grid::grid.rect(
+      x = grid::unit(
+        (
+          x0 +
+          x1
+        ) /
+        2,
+        "npc"
+      ),
+      y = grid::unit(
+        top -
+        row_height /
+        2,
+        "npc"
+      ),
+      width = grid::unit(
+        x1 -
+        x0,
+        "npc"
+      ),
+      height = grid::unit(
+        row_height,
+        "npc"
+      ),
+      gp = grid::gpar(
+        fill = tesla_dark,
+        col = tesla_light_gray,
+        lwd = 0.7
+      )
+    )
+
+    grid::grid.text(
+      names(
+        table_data
+      )[
+        column_index
+      ],
+      x = grid::unit(
+        x0 +
+        0.008,
+        "npc"
+      ),
+      y = grid::unit(
+        top -
+        row_height /
+        2,
+        "npc"
+      ),
+      just = c(
+        "left",
+        "center"
+      ),
+      gp = grid::gpar(
+        col = tesla_white,
+        fontsize = font_size,
+        fontface = "bold"
+      )
+    )
+  }
+
+
+  # Body rows.
+
+  for (
+    row_index in seq_len(
+      n_body_rows
+    )
+  ) {
+
+    row_top <-
+      top -
+      row_height *
+      row_index
+
+    fill_color <-
+      if (
+        row_index %% 2 ==
+        1
+      ) {
+        tesla_background
+      } else {
+        tesla_lighter_gray
+      }
+
+    for (
+      column_index in seq_len(
+        n_cols
+      )
+    ) {
+
+      x0 <-
+        x_edges[
+          column_index
+        ]
+
+      x1 <-
+        x_edges[
+          column_index +
+          1
+        ]
+
+      grid::grid.rect(
+        x = grid::unit(
+          (
+            x0 +
+            x1
+          ) /
+          2,
+          "npc"
+        ),
+        y = grid::unit(
+          row_top -
+          row_height /
+          2,
+          "npc"
+        ),
+        width = grid::unit(
+          x1 -
+          x0,
+          "npc"
+        ),
+        height = grid::unit(
+          row_height,
+          "npc"
+        ),
+        gp = grid::gpar(
+          fill = fill_color,
+          col = tesla_light_gray,
+          lwd = 0.6
+        )
+      )
+
+      cell_text <-
+        as.character(
+          table_data[
+            row_index,
+            column_index
+          ]
+        )
+
+      wrapped_text <-
+        paste(
+          strwrap(
+            cell_text,
+            width = 34
+          ),
+          collapse = "\n"
+        )
+
+      grid::grid.text(
+        wrapped_text,
+        x = grid::unit(
+          x0 +
+          0.008,
+          "npc"
+        ),
+        y = grid::unit(
+          row_top -
+          row_height /
+          2,
+          "npc"
+        ),
+        just = c(
+          "left",
+          "center"
+        ),
+        gp = grid::gpar(
+          col = tesla_dark,
+          fontsize = font_size
+        )
+      )
+    }
+  }
+
+  dev.off()
+}
+
+
+# Render a horizontal cost chart.
+
+render_horizontal_cost_chart <- function(
+  labels,
+  values,
+  file_name,
+  title,
+  red_bar = NA_integer_
+) {
+
+  png(
+    file.path(
+      summary_png_dir,
+      file_name
+    ),
+    width = 1600,
+    height = 900,
+    res = 144,
+    bg = tesla_background
+  )
+
+  par(
+    mar = c(
+      6,
+      13,
+      5,
+      4
+    ),
+    bg = tesla_background,
+    fg = tesla_dark,
+    col.axis = tesla_dark,
+    col.lab = tesla_dark
+  )
+
+  colors <-
+    rep(
+      tesla_dark_gray,
+      length(
+        values
+      )
+    )
+
+  if (
+    !is.na(
+      red_bar
+    )
+  ) {
+
+    colors[
+      red_bar
+    ] <-
+      tesla_red
+  }
+
+  bars <-
+    barplot(
+      values,
+      names.arg = labels,
+      horiz = TRUE,
+      las = 1,
+      col = colors,
+      border = NA,
+      xlab = "Daily on-call cost ($)",
+      main = title,
+      cex.names = 1.0
+    )
+
+  text(
+    x = values +
+      max(
+        values
+      ) *
+      0.02,
+    y = bars,
+    labels = paste0(
+      "$",
+      format(
+        values,
+        big.mark = ",",
+        trim = TRUE
+      )
+    ),
+    pos = 4,
+    col = tesla_dark
+  )
+
+  dev.off()
+}
+
+
+# -----------------------------------------------------------------------------
+# 12E. SUMMARY CALCULATIONS
+# -----------------------------------------------------------------------------
+
+
+# ----- Scenario costs -----
+
+baseline_cost <-
+  baseline_model$objval
+
+restricted_cost <-
+  restricted_model$objval
+
+bilingual_cost <-
+  bilingual_model$objval
+
+
+# ----- Scenario staffing totals -----
+
+baseline_ft_english <-
+  sum(
+    baseline_solution[
+      english_ft_vars
+    ]
+  )
+
+baseline_ft_spanish <-
+  sum(
+    baseline_solution[
+      spanish_ft_vars
+    ]
+  )
+
+baseline_pt_english <-
+  sum(
+    baseline_solution[
+      english_pt_vars
+    ]
+  )
+
+baseline_ft_total <-
+  baseline_ft_english +
+  baseline_ft_spanish
+
+baseline_total_agents <-
+  baseline_ft_total +
+  baseline_pt_english
+
+
+restricted_ft_english <-
+  sum(
+    restricted_solution[
+      english_ft_vars
+    ]
+  )
+
+restricted_ft_spanish <-
+  sum(
+    restricted_solution[
+      spanish_ft_vars
+    ]
+  )
+
+restricted_pt_english <-
+  sum(
+    restricted_solution[
+      english_pt_vars
+    ]
+  )
+
+restricted_ft_total <-
+  restricted_ft_english +
+  restricted_ft_spanish
+
+restricted_total_agents <-
+  restricted_ft_total +
+  restricted_pt_english
+
+
+bilingual_ft_total <-
+  sum(
+    bilingual_solution[
+      grepl(
+        "^bil_ft_",
+        names(
+          bilingual_solution
+        )
+      )
+    ]
+  )
+
+bilingual_pt_total <-
+  sum(
+    bilingual_solution[
+      grepl(
+        "^bil_pt_",
+        names(
+          bilingual_solution
+        )
+      )
+    ]
+  )
+
+bilingual_total_agents <-
+  bilingual_ft_total +
+  bilingual_pt_total
+
+
+# ----- Scenario savings -----
+
+restricted_cost_increase <-
+  restricted_cost -
+  baseline_cost
+
+restricted_cost_increase_pct <-
+  (
+    restricted_cost /
+    baseline_cost -
+    1
+  ) *
+  100
+
+
+bilingual_savings <-
+  baseline_cost -
+  bilingual_cost
+
+bilingual_savings_pct <-
+  (
+    1 -
+    bilingual_cost /
+    baseline_cost
+  ) *
+  100
+
+
+bilingual_savings_vs_restricted <-
+  restricted_cost -
+  bilingual_cost
+
+bilingual_savings_vs_restricted_pct <-
+  (
+    1 -
+    bilingual_cost /
+    restricted_cost
+  ) *
+  100
+
+
+# ----- Cost per call -----
+
+daily_calls <-
+  sum(
+    demand$calls_per_block
+  )
+
+baseline_cost_per_call <-
+  baseline_cost /
+  daily_calls
+
+restricted_cost_per_call <-
+  restricted_cost /
+  daily_calls
+
+bilingual_cost_per_call <-
+  bilingual_cost /
+  daily_calls
+
+
+# ----- Bilingual wage premium -----
+
+max_bilingual_premium <-
+  (
+    baseline_cost /
+    bilingual_cost
+  ) -
+  1
+
+max_bilingual_premium_pct <-
+  max_bilingual_premium *
+  100
+
+premium_wage_before_5pm <-
+  wage_before_5pm *
+  (
+    1 +
+    max_bilingual_premium
+  )
+
+premium_wage_after_5pm <-
+  wage_after_5pm *
+  (
+    1 +
+    max_bilingual_premium
+  )
+
+
+# ----- Annualized business case -----
+
+annual_savings_vs_baseline <-
+  bilingual_savings *
+  weekdays_per_year
+
+annual_savings_vs_restricted <-
+  bilingual_savings_vs_restricted *
+  weekdays_per_year
+
+
+# ----- Historical growth calculations -----
+
+total_revenue_growth_pct <-
+  (
+    total_revenue_2018_billion /
+    total_revenue_2017_billion -
+    1
+  ) *
+  100
+
+
+vehicle_delivery_growth_pct <-
+  (
+    vehicle_deliveries_2018 /
+    vehicle_deliveries_2017 -
+    1
+  ) *
+  100
+
+
+delivery_run_rate_growth_pct <-
+  (
+    annualized_delivery_run_rate_end_2018 /
+    annualized_delivery_run_rate_start_2018 -
+    1
+  ) *
+  100
+
+
+automotive_revenue_growth_pct <-
+  (
+    automotive_sales_revenue_2018_billion /
+    automotive_sales_revenue_2017_billion -
+    1
+  ) *
+  100
+
+
+# -----------------------------------------------------------------------------
+# 12F. ANSWER-KEY SUMMARY TABLE
+# -----------------------------------------------------------------------------
+
+
+answer_key_table <-
+  data.frame(
+    Section = c(
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H"
+    ),
+    `What Alex asked` = c(
+      "English-/Spanish-only hires by shift",
+      "English-/Spanish-only minimum cost",
+      "Hires with 1 PM / 3 PM English cap",
+      "Minimum cost with the cap",
+      "Hires if every agent is bilingual",
+      "Bilingual minimum cost",
+      "Max bilingual wage premium",
+      "Cost if calls grow 10-30%"
+    ),
+    `Our answer` = c(
+      paste0(
+        baseline_ft_total,
+        " FT (",
+        baseline_ft_english,
+        " English, ",
+        baseline_ft_spanish,
+        " Spanish) + ",
+        baseline_pt_english,
+        " PT"
+      ),
+      paste0(
+        "$",
+        format(
+          baseline_cost,
+          big.mark = ",",
+          nsmall = 2
+        ),
+        " per day"
+      ),
+      paste0(
+        restricted_ft_total,
+        " FT (",
+        restricted_ft_english,
+        " English, ",
+        restricted_ft_spanish,
+        " Spanish) + ",
+        restricted_pt_english,
+        " PT"
+      ),
+      paste0(
+        "$",
+        format(
+          restricted_cost,
+          big.mark = ",",
+          nsmall = 2
+        ),
+        " (+$",
+        restricted_cost_increase,
+        ", +",
+        round(
+          restricted_cost_increase_pct,
+          1
+        ),
+        "%)"
+      ),
+      paste0(
+        bilingual_ft_total,
+        " FT + ",
+        bilingual_pt_total,
+        " PT"
+      ),
+      paste0(
+        "$",
+        format(
+          bilingual_cost,
+          big.mark = ",",
+          nsmall = 2
+        ),
+        " (-$",
+        bilingual_savings,
+        ", -",
+        round(
+          bilingual_savings_pct,
+          1
+        ),
+        "%)"
+      ),
+      paste0(
+        round(
+          max_bilingual_premium_pct,
+          1
+        ),
+        "%"
+      ),
+      paste0(
+        "+30% calls: $",
+        format(
+          growth_results$minimum_cost[
+            growth_results$demand_growth_pct ==
+            "30%"
+          ],
+          big.mark = ","
+        ),
+        "/day"
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+render_table_png(
+  answer_key_table,
+  "01_answer_key_table.png",
+  "Every answer at a glance",
+  c(
+    0.08,
+    0.42,
+    0.50
+  ),
+  9
+)
+
+
+# -----------------------------------------------------------------------------
+# 12G. HISTORICAL FINANCIAL CONTEXT
+# -----------------------------------------------------------------------------
+
+
+historical_context_table <-
+  data.frame(
+    Metric = c(
+      "Model 3 deliveries",
+      "Total revenue",
+      "Revenue growth",
+      "Net loss",
+      "Q3 profit",
+      "Q4 profit"
+    ),
+    Value = c(
+      format(
+        model_3_deliveries_2018,
+        big.mark = ",",
+        scientific = FALSE
+      ),
+      paste0(
+        "$",
+        total_revenue_2018_billion,
+        "B"
+      ),
+      paste0(
+        round(
+          total_revenue_growth_pct
+        ),
+        "%"
+      ),
+      paste0(
+        "-$",
+        abs(
+          net_loss_2018_million
+        ),
+        "M"
+      ),
+      paste0(
+        "$",
+        q3_profit_2018_million,
+        "M"
+      ),
+      paste0(
+        "$",
+        q4_profit_2018_million,
+        "M"
+      )
+    ),
+    Context = c(
+      "2018",
+      "2018",
+      "vs. 2017",
+      "2018",
+      "2018 Q3",
+      "2018 Q4"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+
+render_table_png(
+  historical_context_table,
+  "02_2018_financial_context.png",
+  "Tesla in 2018: financial context",
+  c(
+    0.45,
+    0.25,
+    0.30
+  ),
+  12
+)
+
+
+# -----------------------------------------------------------------------------
+# 12H. DEMAND PROFILE
+# -----------------------------------------------------------------------------
+
+
+english_calls_per_hour <-
+  demand$english_calls_per_hour
+
+spanish_calls_per_hour <-
+  demand$spanish_calls_per_hour
+
+total_calls_per_hour <-
+  demand$calls_per_hour
+
+
+png(
+  file.path(
+    summary_png_dir,
+    "03_demand_profile.png"
+  ),
+  width = 1600,
+  height = 900,
+  res = 144,
+  bg = tesla_background
+)
+
+par(
+  mar = c(
+    7,
+    6,
+    5,
+    3
+  ),
+  bg = tesla_background,
+  col.axis = tesla_dark,
+  col.lab = tesla_dark
+)
+
+demand_positions <-
+  barplot(
+    rbind(
+      english_calls_per_hour,
+      spanish_calls_per_hour
+    ),
+    beside = FALSE,
+    col = c(
+      tesla_dark_gray,
+      tesla_red
+    ),
+    border = NA,
+    names.arg = demand$time_block,
+    ylab = "Average calls per hour",
+    main = "Calls peak at 1-3 PM and fade after 5 PM",
+    ylim = c(
+      0,
+      max(
+        total_calls_per_hour
+      ) *
+      1.18
+    )
+  )
+
+text(
+  demand_positions,
+  total_calls_per_hour +
+  3,
+  labels = total_calls_per_hour,
+  col = tesla_dark,
+  font = 2
+)
+
+legend(
+  "topright",
+  legend = c(
+    "English - 80%",
+    "Spanish - 20%"
+  ),
+  fill = c(
+    tesla_dark_gray,
+    tesla_red
+  ),
+  border = NA,
+  bty = "n"
+)
+
+dev.off()
+
+
+# -----------------------------------------------------------------------------
+# 12I. OPERATING-RULE TABLE
+# -----------------------------------------------------------------------------
+
+
+operating_rules_table <-
+  data.frame(
+    `Hire option` = c(
+      "FT start 7 AM",
+      "FT start 9 AM",
+      "FT start 11 AM",
+      "FT start 1 PM",
+      "FT start 3 PM",
+      "PT start 3 PM",
+      "PT start 5 PM"
+    ),
+    `7-9` = c(
+      "CALL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ),
+    `9-11` = c(
+      "off",
+      "CALL",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ),
+    `11-1` = c(
+      "CALL",
+      "off",
+      "CALL",
+      "",
+      "",
+      "",
+      ""
+    ),
+    `1-3` = c(
+      "off",
+      "CALL",
+      "off",
+      "CALL",
+      "",
+      "",
+      ""
+    ),
+    `3-5` = c(
+      "",
+      "off",
+      "CALL",
+      "off",
+      "CALL",
+      "CALL",
+      ""
+    ),
+    `5-7` = c(
+      "",
+      "",
+      "off",
+      "CALL",
+      "off",
+      "CALL",
+      "CALL"
+    ),
+    `7-9` = c(
+      "",
+      "",
+      "",
+      "off",
+      "CALL",
+      "",
+      "CALL"
+    ),
+    Cost = paste0(
+      "$",
+      cost_per_option
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+render_table_png(
+  operating_rules_table,
+  "04_operating_rules_table.png",
+  "Each hire covers a fixed set of blocks",
+  c(
+    0.18,
+    rep(
+      0.09,
+      7
+    ),
+    0.09
+  ),
+  9
+)
+
+
+# -----------------------------------------------------------------------------
+# 12J. MODEL-SYMBOL TABLES
+# -----------------------------------------------------------------------------
+
+
+objective_symbols_table <-
+  data.frame(
+    Symbol = c(
+      "Z",
+      "T",
+      "K",
+      "E, S",
+      "P",
+      "c"
+    ),
+    Meaning = c(
+      "Total daily on-call salary cost",
+      "Full-time start times",
+      "Part-time start times",
+      "English, Spanish full-timers starting at t",
+      "English part-timers starting at k",
+      "Cost per hire, set by start time"
+    ),
+    Values = c(
+      "Minimize",
+      "7, 9, 11 AM · 1, 3 PM",
+      "3, 5 PM",
+      "Agents hired (whole numbers)",
+      "Agents hired (whole numbers)",
+      "$120 at 7, 9, 11 · $150 at 1, 3 · $180 at 5"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+
+render_table_png(
+  objective_symbols_table,
+  "05_objective_symbols_table.png",
+  "Objective function symbols",
+  c(
+    0.12,
+    0.46,
+    0.42
+  ),
+  11
+)
+
+
+constraint_symbols_table <-
+  data.frame(
+    Symbol = c(
+      "r",
+      "d",
+      "s",
+      "A(t)",
+      "x"
+    ),
+    Meaning = c(
+      "Calls one agent handles per 2-hour block",
+      "Calls in block t",
+      "Language share of calls",
+      "Hires on calls during block t",
+      "Agents hired: E, S, P or B"
+    ),
+    Values = c(
+      agent_capacity_per_block,
+      paste(
+        demand$calls_per_block,
+        collapse = ", "
+      ),
+      "English 0.8 · Spanish 0.2 · Bilingual 1.0",
+      "Defined by the coverage matrix",
+      "Whole numbers >= 0"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+
+render_table_png(
+  constraint_symbols_table,
+  "06_constraint_symbols_table.png",
+  "Constraint symbols",
+  c(
+    0.12,
+    0.48,
+    0.40
+  ),
+  11
+)
+
+
+# -----------------------------------------------------------------------------
+# 12K. STAFFING TABLES
+# -----------------------------------------------------------------------------
+
+
+staffing_start_labels <-
+  c(
+    "7 AM",
+    "9 AM",
+    "11 AM",
+    "1 PM",
+    "3 PM",
+    "5 PM"
+  )
+
+
+staffing_option_names <-
+  c(
+    "7am",
+    "9am",
+    "11am",
+    "1pm",
+    "3pm"
+  )
+
+
+baseline_staffing_table <-
+  data.frame(
+    Start = staffing_start_labels,
+    `FT English` = c(
+      sapply(
+        staffing_option_names,
+        function(start_name) {
+          solution_value(
+            baseline_solution,
+            paste0(
+              "eng_ft_",
+              start_name
+            )
+          )
+        }
+      ),
+      "–"
+    ),
+    `FT Spanish` = c(
+      sapply(
+        staffing_option_names,
+        function(start_name) {
+          solution_value(
+            baseline_solution,
+            paste0(
+              "spa_ft_",
+              start_name
+            )
+          )
+        }
+      ),
+      "–"
+    ),
+    `PT English` = c(
+      "–",
+      "–",
+      "–",
+      "–",
+      solution_value(
+        baseline_solution,
+        "eng_pt_3pm"
+      ),
+      solution_value(
+        baseline_solution,
+        "eng_pt_5pm"
+      )
+    ),
+    `On calls` = c(
+      "7-9, 11-1",
+      "9-11, 1-3",
+      "11-1, 3-5",
+      "1-3, 5-7",
+      "FT 3-5, 7-9; PT 3-7",
+      "PT 5-9"
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+baseline_staffing_table <-
+  rbind(
+    baseline_staffing_table,
+    data.frame(
+      Start = "Total",
+      `FT English` = baseline_ft_english,
+      `FT Spanish` = baseline_ft_spanish,
+      `PT English` = baseline_pt_english,
+      `On calls` = paste0(
+        baseline_total_agents,
+        " hires"
+      ),
+      check.names = FALSE
+    )
+  )
+
+
+render_table_png(
+  baseline_staffing_table,
+  "07_baseline_staffing_table.png",
+  "Scenario I: optimal staffing",
+  c(
+    0.12,
+    0.14,
+    0.14,
+    0.14,
+    0.46
+  ),
+  11
+)
+
+
+restricted_staffing_table <-
+  data.frame(
+    Start = staffing_start_labels,
+    `FT English` = c(
+      sapply(
+        staffing_option_names,
+        function(start_name) {
+          solution_value(
+            restricted_solution,
+            paste0(
+              "eng_ft_",
+              start_name
+            )
+          )
+        }
+      ),
+      "–"
+    ),
+    `FT Spanish` = c(
+      sapply(
+        staffing_option_names,
+        function(start_name) {
+          solution_value(
+            restricted_solution,
+            paste0(
+              "spa_ft_",
+              start_name
+            )
+          )
+        }
+      ),
+      "–"
+    ),
+    `PT English` = c(
+      "–",
+      "–",
+      "–",
+      "–",
+      solution_value(
+        restricted_solution,
+        "eng_pt_3pm"
+      ),
+      solution_value(
+        restricted_solution,
+        "eng_pt_5pm"
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+restricted_staffing_table <-
+  rbind(
+    restricted_staffing_table,
+    data.frame(
+      Start = "Total",
+      `FT English` = restricted_ft_english,
+      `FT Spanish` = restricted_ft_spanish,
+      `PT English` = restricted_pt_english,
+      check.names = FALSE
+    )
+  )
+
+
+render_table_png(
+  restricted_staffing_table,
+  "09_restricted_staffing_table.png",
+  "Scenario II: restricted-start staffing",
+  c(
+    0.18,
+    0.20,
+    0.20,
+    0.20
+  ),
+  11
+)
+
+
+bilingual_staffing_table <-
+  data.frame(
+    Start = staffing_start_labels,
+    `FT bilingual` = c(
+      sapply(
+        staffing_option_names,
+        function(start_name) {
+          solution_value(
+            bilingual_solution,
+            paste0(
+              "bil_ft_",
+              start_name
+            )
+          )
+        }
+      ),
+      "–"
+    ),
+    `PT bilingual` = c(
+      "–",
+      "–",
+      "–",
+      "–",
+      solution_value(
+        bilingual_solution,
+        "bil_pt_3pm"
+      ),
+      solution_value(
+        bilingual_solution,
+        "bil_pt_5pm"
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+bilingual_staffing_table <-
+  rbind(
+    bilingual_staffing_table,
+    data.frame(
+      Start = "Total",
+      `FT bilingual` = bilingual_ft_total,
+      `PT bilingual` = bilingual_pt_total,
+      check.names = FALSE
+    )
+  )
+
+
+render_table_png(
+  bilingual_staffing_table,
+  "11_bilingual_staffing_table.png",
+  "Scenario III: bilingual staffing",
+  c(
+    0.30,
+    0.35,
+    0.35
+  ),
+  11
+)
+
+
+# -----------------------------------------------------------------------------
+# 12L. COST BREAKDOWNS
+# -----------------------------------------------------------------------------
+
+
+baseline_english_cost <-
+  sum(
+    baseline_solution[
+      english_ft_vars
+    ] *
+    baseline_costs[
+      english_ft_vars
+    ]
+  )
+
+baseline_spanish_cost <-
+  sum(
+    baseline_solution[
+      spanish_ft_vars
+    ] *
+    baseline_costs[
+      spanish_ft_vars
+    ]
+  )
+
+baseline_part_time_cost <-
+  sum(
+    baseline_solution[
+      english_pt_vars
+    ] *
+    baseline_costs[
+      english_pt_vars
+    ]
+  )
+
+
+restricted_english_cost <-
+  sum(
+    restricted_solution[
+      english_ft_vars
+    ] *
+    baseline_costs[
+      english_ft_vars
+    ]
+  )
+
+restricted_spanish_cost <-
+  sum(
+    restricted_solution[
+      spanish_ft_vars
+    ] *
+    baseline_costs[
+      spanish_ft_vars
+    ]
+  )
+
+restricted_part_time_cost <-
+  sum(
+    restricted_solution[
+      english_pt_vars
+    ] *
+    baseline_costs[
+      english_pt_vars
+    ]
+  )
+
+
+render_horizontal_cost_chart(
+  c(
+    "English full-time",
+    "Spanish full-time",
+    "English part-time"
+  ),
+  c(
+    baseline_english_cost,
+    baseline_spanish_cost,
+    baseline_part_time_cost
+  ),
+  "08_baseline_cost_breakdown.png",
+  "Scenario I: where the money goes",
+  2
+)
+
+
+render_horizontal_cost_chart(
+  c(
+    "English full-time",
+    "Spanish full-time",
+    "English part-time"
+  ),
+  c(
+    restricted_english_cost,
+    restricted_spanish_cost,
+    restricted_part_time_cost
+  ),
+  "10_restricted_cost_breakdown.png",
+  "Scenario II: where the money goes",
+  2
+)
+
+
+render_horizontal_cost_chart(
+  c(
+    "II - English start limit",
+    "I - English + Spanish",
+    "III - Bilingual"
+  ),
+  c(
+    restricted_cost,
+    baseline_cost,
+    bilingual_cost
+  ),
+  "12_scenario_cost_comparison.png",
+  "Daily cost by scenario",
+  3
+)
+
+
+# -----------------------------------------------------------------------------
+# 12M. CAPACITY POOLING
+# -----------------------------------------------------------------------------
+
+
+baseline_ft_counts <-
+  baseline_solution[
+    english_ft_vars
+  ] +
+  baseline_solution[
+    spanish_ft_vars
+  ]
+
+baseline_pt_counts <-
+  baseline_solution[
+    english_pt_vars
+  ]
+
+baseline_total_counts <-
+  c(
+    baseline_ft_counts,
+    baseline_pt_counts
+  )
+
+names(
+  baseline_total_counts
+) <-
+  rownames(
+    coverage_matrix
+  )
+
+
+restricted_ft_counts <-
+  restricted_solution[
+    english_ft_vars
+  ] +
+  restricted_solution[
+    spanish_ft_vars
+  ]
+
+restricted_pt_counts <-
+  restricted_solution[
+    english_pt_vars
+  ]
+
+restricted_total_counts <-
+  c(
+    restricted_ft_counts,
+    restricted_pt_counts
+  )
+
+names(
+  restricted_total_counts
+) <-
+  rownames(
+    coverage_matrix
+  )
+
+
+bilingual_total_counts <-
+  bilingual_solution
+
+names(
+  bilingual_total_counts
+) <-
+  sub(
+    "^bil_",
+    "",
+    names(
+      bilingual_total_counts
+    )
+  )
+
+
+baseline_capacity <-
+  as.numeric(
+    baseline_total_counts[
+      rownames(
+        coverage_matrix
+      )
+    ] %*%
+    coverage_matrix
+  ) *
+  agent_capacity_per_block
+
+
+restricted_capacity <-
+  as.numeric(
+    restricted_total_counts[
+      rownames(
+        coverage_matrix
+      )
+    ] %*%
+    coverage_matrix
+  ) *
+  agent_capacity_per_block
+
+
+bilingual_capacity <-
+  as.numeric(
+    bilingual_total_counts[
+      rownames(
+        coverage_matrix
+      )
+    ] %*%
+    coverage_matrix
+  ) *
+  agent_capacity_per_block
+
+
+daily_baseline_capacity <-
+  sum(
+    baseline_capacity
+  )
+
+daily_restricted_capacity <-
+  sum(
+    restricted_capacity
+  )
+
+daily_bilingual_capacity <-
+  sum(
+    bilingual_capacity
+  )
+
+
+baseline_idle_capacity <-
+  daily_baseline_capacity -
+  daily_calls
+
+restricted_idle_capacity <-
+  daily_restricted_capacity -
+  daily_calls
+
+bilingual_idle_capacity <-
+  daily_bilingual_capacity -
+  daily_calls
+
+
+idle_agent_hours_removed <-
+  (
+    baseline_idle_capacity -
+    bilingual_idle_capacity
+  ) /
+  calls_per_agent_hour
+
+
+png(
+  file.path(
+    summary_png_dir,
+    "13_capacity_pooling.png"
+  ),
+  width = 1600,
+  height = 900,
+  res = 144,
+  bg = tesla_background
+)
+
+par(
+  mar = c(
+    7,
+    6,
+    5,
+    3
+  ),
+  bg = tesla_background,
+  col.axis = tesla_dark,
+  col.lab = tesla_dark
+)
+
+barplot(
+  rbind(
+    demand$calls_per_block,
+    baseline_capacity,
+    bilingual_capacity
+  ),
+  beside = TRUE,
+  col = c(
+    tesla_mid_gray,
+    tesla_dark_gray,
+    tesla_red
+  ),
+  border = NA,
+  names.arg = demand$time_block,
+  ylab = "Calls per 2-hour block",
+  main = "Pooling removes the idle cushion"
+)
+
+legend(
+  "topright",
+  legend = c(
+    "Calls (demand)",
+    "English-/Spanish-only capacity",
+    "Bilingual capacity"
+  ),
+  fill = c(
+    tesla_mid_gray,
+    tesla_dark_gray,
+    tesla_red
+  ),
+  border = NA,
+  bty = "n"
+)
+
+dev.off()
+
+
+# -----------------------------------------------------------------------------
+# 12N. BILINGUAL WAGE-PREMIUM CHART
+# -----------------------------------------------------------------------------
+
+
+premium_grid <-
+  seq(
+    0,
+    0.12,
+    by = 0.0025
+  )
+
+premium_costs <-
+  bilingual_cost *
+  (
+    1 +
+    premium_grid
+  )
+
+
+png(
+  file.path(
+    summary_png_dir,
+    "14_bilingual_wage_premium.png"
+  ),
+  width = 1600,
+  height = 900,
+  res = 144,
+  bg = tesla_background
+)
+
+par(
+  mar = c(
+    7,
+    7,
+    5,
+    3
+  ),
+  bg = tesla_background,
+  col.axis = tesla_dark,
+  col.lab = tesla_dark
+)
+
+plot(
+  premium_grid *
+  100,
+  premium_costs,
+  type = "l",
+  lwd = 3,
+  col = tesla_red,
+  xlab = "Uniform bilingual wage premium (%)",
+  ylab = "Daily on-call cost ($)",
+  main = "We can pay bilingual agents up to 9% more"
+)
+
+abline(
+  h = baseline_cost,
+  col = tesla_dark,
+  lty = 2
+)
+
+abline(
+  h = restricted_cost,
+  col = tesla_mid_gray,
+  lty = 2
+)
+
+abline(
+  v = max_bilingual_premium_pct,
+  col = tesla_light_gray,
+  lty = 3
+)
+
+points(
+  max_bilingual_premium_pct,
+  baseline_cost,
+  pch = 19,
+  cex = 1.5,
+  col = tesla_red
+)
+
+dev.off()
+
+
+# -----------------------------------------------------------------------------
+# 12O. BUSINESS-CASE TABLE
+# -----------------------------------------------------------------------------
+
+
+business_case_table <-
+  data.frame(
+    Metric = c(
+      "Annual savings vs. baseline",
+      "Annual savings vs. restricted",
+      "Bilingual cost per call",
+      "Idle agent time removed"
+    ),
+    Value = c(
+      paste0(
+        "$",
+        round(
+          annual_savings_vs_baseline /
+          1000
+        ),
+        "K"
+      ),
+      paste0(
+        "$",
+        round(
+          annual_savings_vs_restricted /
+          1000
+        ),
+        "K"
+      ),
+      paste0(
+        "$",
+        format(
+          round(
+            bilingual_cost_per_call,
+            2
+          ),
+          nsmall = 2
+        )
+      ),
+      paste0(
+        round(
+          idle_agent_hours_removed,
+          1
+        ),
+        " hrs"
+      )
+    ),
+    Calculation = c(
+      paste0(
+        "$",
+        bilingual_savings,
+        " x ",
+        weekdays_per_year,
+        " weekdays"
+      ),
+      paste0(
+        "$",
+        bilingual_savings_vs_restricted,
+        " x ",
+        weekdays_per_year,
+        " weekdays"
+      ),
+      paste0(
+        "$",
+        format(
+          bilingual_cost,
+          big.mark = ","
+        ),
+        " / ",
+        daily_calls,
+        " calls"
+      ),
+      paste0(
+        "(",
+        baseline_idle_capacity,
+        " - ",
+        bilingual_idle_capacity,
+        " calls) / ",
+        calls_per_agent_hour,
+        " calls/hr"
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+
+
+render_table_png(
+  business_case_table,
+  "15_business_case_metrics.png",
+  "What bilingual staffing is worth in a year",
+  c(
+    0.40,
+    0.20,
+    0.40
+  ),
+  12
+)
+
+
+# -----------------------------------------------------------------------------
+# 12P. SCALE-CONTEXT TABLE
+# -----------------------------------------------------------------------------
+
+
+scale_context_table <-
+  data.frame(
+    Metric = c(
+      "Vehicle deliveries",
+      "Annualized delivery run rate",
+      "Automotive sales revenue"
+    ),
+    `2017 / early 2018` = c(
+      format(
+        vehicle_deliveries_2017,
+        big.mark = ",",
+        scientific = FALSE
+      ),
+      paste0(
+        "~",
+        format(
+          annualized_delivery_run_rate_start_2018,
+          big.mark = ",",
+          scientific = FALSE
+        )
+      ),
+      paste0(
+        "$",
+        automotive_sales_revenue_2017_billion,
+        "B"
+      )
+    ),
+    `2018 / year-end` = c(
+      format(
+        vehicle_deliveries_2018,
+        big.mark = ",",
+        scientific = FALSE
+      ),
+      paste0(
+        format(
+          annualized_delivery_run_rate_end_2018,
+          big.mark = ",",
+          scientific = FALSE
+        ),
+        "+"
+      ),
+      paste0(
+        "$",
+        automotive_sales_revenue_2018_billion,
+        "B"
+      )
+    ),
+    Growth = c(
+      paste0(
+        "+",
+        round(
+          vehicle_delivery_growth_pct
+        ),
+        "%"
+      ),
+      paste0(
+        ">+",
+        round(
+          delivery_run_rate_growth_pct
+        ),
+        "%"
+      ),
+      paste0(
+        "+",
+        round(
+          automotive_revenue_growth_pct
+        ),
+        "%"
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+render_table_png(
+  scale_context_table,
+  "16_scale_context.png",
+  "The next constraint: scale",
+  c(
+    0.38,
+    0.22,
+    0.22,
+    0.18
+  ),
+  12
+)
+
+
+# -----------------------------------------------------------------------------
+# 12Q. DEMAND-GROWTH SENSITIVITY
+# -----------------------------------------------------------------------------
+
+
+growth_calls <-
+  round(
+    daily_calls *
+    (
+      1 +
+      as.numeric(
+        sub(
+          "%",
+          "",
+          growth_results$demand_growth_pct,
+          fixed = TRUE
+        )
+      ) /
+      100
+    )
+  )
+
+
+growth_total_agents <-
+  growth_results$full_time_agents +
+  growth_results$part_time_agents
+
+
+growth_cost_per_call <-
+  growth_results$minimum_cost /
+  growth_calls
+
+
+png(
+  file.path(
+    summary_png_dir,
+    "17_growth_sensitivity.png"
+  ),
+  width = 1600,
+  height = 900,
+  res = 144,
+  bg = tesla_background
+)
+
+par(
+  mar = c(
+    7,
+    6,
+    5,
+    3
+  ),
+  bg = tesla_background,
+  col.axis = tesla_dark,
+  col.lab = tesla_dark
+)
+
+growth_colors <-
+  c(
+    tesla_red,
+    rep(
+      tesla_dark_gray,
+      nrow(
+        growth_results
+      ) -
+      1
+    )
+  )
+
+
+growth_positions <-
+  barplot(
+    growth_results$minimum_cost,
+    names.arg = growth_results$demand_growth_pct,
+    col = growth_colors,
+    border = NA,
+    ylab = "Daily on-call cost ($)",
+    main = "If calls grow 30%, cost grows about 25%",
+    ylim = c(
+      0,
+      max(
+        growth_results$minimum_cost
+      ) *
+      1.20
+    )
+  )
+
+
+text(
+  growth_positions,
+  growth_results$minimum_cost +
+  150,
+  labels = paste0(
+    "$",
+    format(
+      growth_results$minimum_cost,
+      big.mark = ","
+    ),
+    "\n",
+    growth_total_agents,
+    " hires"
+  ),
+  col = tesla_dark
+)
+
+dev.off()
+
+
+growth_sensitivity_table <-
+  data.frame(
+    Growth = growth_results$demand_growth_pct,
+    `Calls/day` = format(
+      growth_calls,
+      big.mark = ",",
+      scientific = FALSE
+    ),
+    `FT + PT` = paste0(
+      growth_results$full_time_agents,
+      " + ",
+      growth_results$part_time_agents
+    ),
+    `Daily cost` = paste0(
+      "$",
+      format(
+        growth_results$minimum_cost,
+        big.mark = ",",
+        scientific = FALSE
+      )
+    ),
+    `Per call` = paste0(
+      "$",
+      format(
+        round(
+          growth_cost_per_call,
+          2
+        ),
+        nsmall = 2
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+render_table_png(
+  growth_sensitivity_table,
+  "18_growth_sensitivity_table.png",
+  "Demand-growth sensitivity output",
+  c(
+    0.17,
+    0.18,
+    0.18,
+    0.23,
+    0.24
+  ),
+  12
+)
+
+
+# -----------------------------------------------------------------------------
+# 12R. ILLUSTRATIVE EFFICIENCY LEVERS
+# -----------------------------------------------------------------------------
+
+
+capacity_increase_pct <-
+  (
+    improved_calls_per_agent_hour /
+    calls_per_agent_hour -
+    1
+  ) *
+  100
+
+
+efficiency_levers_table <-
+  data.frame(
+    `Illustrative lever` = c(
+      "Avoid calls in one 2-hour block",
+      "Raise handling rate"
+    ),
+    Change = c(
+      paste0(
+        agent_capacity_per_block,
+        " calls"
+      ),
+      paste0(
+        calls_per_agent_hour,
+        " -> ",
+        improved_calls_per_agent_hour,
+        " calls/hour"
+      )
+    ),
+    `Model implication` = c(
+      "Approximately 1 active agent-block",
+      paste0(
+        "+",
+        round(
+          capacity_increase_pct,
+          1
+        ),
+        "% capacity with the same team"
+      )
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+
+render_table_png(
+  efficiency_levers_table,
+  "19_efficiency_levers.png",
+  "Illustrative levers beyond the optimization",
+  c(
+    0.42,
+    0.22,
+    0.36
+  ),
+  12
+)
+
+
+# -----------------------------------------------------------------------------
+# 12S. CONSOLE OUTPUT
+# -----------------------------------------------------------------------------
+
+
+summary_console_path <-
+  file.path(
+    summary_output_dir,
+    "summary_console_output.txt"
+  )
+
+
+sink(
+  summary_console_path,
+  split = TRUE
+)
+
+
+cat("\n============================================================\n")
+cat("12. SUMMARY OUTPUT\n")
+cat("============================================================\n\n")
+
+
+cat("SCENARIO SUMMARY\n")
+cat("----------------\n")
+
+cat(
+  "Baseline:         ",
+  baseline_total_agents,
+  " agents | $",
+  baseline_cost,
+  "/day | $",
+  round(
+    baseline_cost_per_call,
+    2
+  ),
+  "/call\n",
+  sep = ""
+)
+
+cat(
+  "Restricted:       ",
+  restricted_total_agents,
+  " agents | $",
+  restricted_cost,
+  "/day | $",
+  round(
+    restricted_cost_per_call,
+    2
+  ),
+  "/call\n",
+  sep = ""
+)
+
+cat(
+  "Bilingual:        ",
+  bilingual_total_agents,
+  " agents | $",
+  bilingual_cost,
+  "/day | $",
+  round(
+    bilingual_cost_per_call,
+    2
+  ),
+  "/call\n\n",
+  sep = ""
+)
+
+
+cat("BILINGUAL VALUE\n")
+cat("---------------\n")
+
+cat(
+  "Daily savings vs. baseline:      $",
+  bilingual_savings,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Percent savings vs. baseline:    ",
+  round(
+    bilingual_savings_pct,
+    1
+  ),
+  "%\n",
+  sep = ""
+)
+
+cat(
+  "Annual savings vs. baseline:     $",
+  format(
+    annual_savings_vs_baseline,
+    big.mark = ","
+  ),
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Annual savings vs. restricted:   $",
+  format(
+    annual_savings_vs_restricted,
+    big.mark = ","
+  ),
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Break-even bilingual premium:    ",
+  round(
+    max_bilingual_premium_pct,
+    1
+  ),
+  "%\n",
+  sep = ""
+)
+
+cat(
+  "Pay cap before 5 PM:             $",
+  round(
+    premium_wage_before_5pm,
+    2
+  ),
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Pay cap after 5 PM:              $",
+  round(
+    premium_wage_after_5pm,
+    2
+  ),
+  "\n\n",
+  sep = ""
+)
+
+
+cat("CAPACITY / POOLING\n")
+cat("------------------\n")
+
+cat(
+  "Daily demand:                    ",
+  daily_calls,
+  " calls\n",
+  sep = ""
+)
+
+cat(
+  "Baseline call capacity:          ",
+  daily_baseline_capacity,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Restricted call capacity:        ",
+  daily_restricted_capacity,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Bilingual call capacity:         ",
+  daily_bilingual_capacity,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Baseline idle call capacity:     ",
+  baseline_idle_capacity,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Bilingual idle call capacity:    ",
+  bilingual_idle_capacity,
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Idle agent time removed:         ",
+  round(
+    idle_agent_hours_removed,
+    1
+  ),
+  " hours/day\n\n",
+  sep = ""
+)
+
+
+cat("2018 SCALE CONTEXT\n")
+cat("------------------\n")
+
+cat(
+  "Vehicle-delivery growth:         +",
+  round(
+    vehicle_delivery_growth_pct,
+    1
+  ),
+  "%\n",
+  sep = ""
+)
+
+cat(
+  "Delivery run-rate growth:        +",
+  round(
+    delivery_run_rate_growth_pct,
+    1
+  ),
+  "%\n",
+  sep = ""
+)
+
+cat(
+  "Automotive revenue growth:       +",
+  round(
+    automotive_revenue_growth_pct,
+    1
+  ),
+  "%\n\n",
+  sep = ""
+)
+
+
+cat("DEMAND-GROWTH SENSITIVITY\n")
+cat("-------------------------\n")
+
+print(
+  growth_sensitivity_table,
+  row.names = FALSE
+)
+
+cat("\n")
+
+
+growth_30_cost_change_pct <-
+  (
+    growth_results$minimum_cost[
+      growth_results$demand_growth_pct ==
+      "30%"
+    ] /
+    baseline_cost -
+    1
+  ) *
+  100
+
+
+cat(
+  "+30% calls -> cost change:        +",
+  round(
+    growth_30_cost_change_pct,
+    1
+  ),
+  "%\n",
+  sep = ""
+)
+
+cat(
+  "6 -> 7 calls/hour capacity gain: +",
+  round(
+    capacity_increase_pct,
+    1
+  ),
+  "%\n\n",
+  sep = ""
+)
