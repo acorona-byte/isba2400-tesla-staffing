@@ -3935,3 +3935,92 @@ cat(
   "%\n\n",
   sep = ""
 )
+
+# -----------------------------------------------------------------------------
+# 12T. OPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION
+# -----------------------------------------------------------------------------
+# Professor feedback: retain minimum staffing cost as the main answer.
+# This is a post-solution comparison, not a new objective or constraint.
+# Add one English FT agent starting at 9 AM to the returned baseline schedule.
+# The existing rotation covers calls at 9-11 AM and 1-3 PM only.
+# Utilization = English forecast calls / English theoretical call capacity.
+# It does not predict waiting times or guarantee a service level. The roughly
+# 80% utilization discussion is context only, not an imposed threshold.
+# Alternative optimal schedules can produce different utilization percentages.
+
+util_sensitivity_solution <- baseline_solution
+util_sensitivity_solution["eng_ft_9am"] <-
+  util_sensitivity_solution["eng_ft_9am"] + 1
+
+# Select English FT and PT only; do not pool Spanish capacity into this measure.
+util_english_vars <- c(english_ft_vars, english_pt_vars)
+util_english_patterns <- sub("^eng_", "", util_english_vars)
+util_coverage <- coverage_matrix[util_english_patterns, , drop = FALSE]
+
+util_baseline_capacity <- as.numeric(
+  baseline_solution[util_english_vars] %*% util_coverage
+) * agent_capacity_per_block
+util_sensitivity_capacity <- as.numeric(
+  util_sensitivity_solution[util_english_vars] %*% util_coverage
+) * agent_capacity_per_block
+
+# Positive capacity is required to report meaningful utilization percentages.
+stopifnot(
+  all(is.finite(util_baseline_capacity)),
+  all(util_baseline_capacity > 0),
+  all(is.finite(util_sensitivity_capacity)),
+  all(util_sensitivity_capacity > 0)
+)
+
+util_sensitivity_table <- data.frame(
+  time_block = demand$time_block,
+  english_calls = demand$english_calls_per_block,
+  baseline_capacity = util_baseline_capacity,
+  plus_one_capacity = util_sensitivity_capacity,
+  baseline_utilization_pct =
+    100 * demand$english_calls_per_block / util_baseline_capacity,
+  plus_one_utilization_pct =
+    100 * demand$english_calls_per_block / util_sensitivity_capacity
+)
+util_sensitivity_table$reduction_percentage_points <-
+  util_sensitivity_table$baseline_utilization_pct -
+  util_sensitivity_table$plus_one_utilization_pct
+
+util_baseline_daily_cost <- sum(
+  baseline_solution * baseline_costs[names(baseline_solution)]
+)
+util_sensitivity_daily_cost <- sum(
+  util_sensitivity_solution * baseline_costs[names(util_sensitivity_solution)]
+)
+util_incremental_daily_cost <-
+  util_sensitivity_daily_cost - util_baseline_daily_cost
+
+# Validate the change against the existing shift coverage and wage definitions.
+stopifnot(
+  isTRUE(all.equal(
+    util_sensitivity_capacity - util_baseline_capacity,
+    as.numeric(coverage_matrix["ft_9am", ]) * agent_capacity_per_block
+  )),
+  isTRUE(all.equal(
+    util_incremental_daily_cost,
+    unname(baseline_costs["eng_ft_9am"])
+  )),
+  all(util_sensitivity_table$reduction_percentage_points >= -1e-8)
+)
+
+cat("\nOPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION\n")
+cat("Baseline plus one English full-time agent starting at 9 AM.\n")
+print(util_sensitivity_table, row.names = FALSE, digits = 4)
+cat(sprintf(
+  "\nBaseline cost: $%.2f/day; optional scenario: $%.2f/day; increase: $%.2f/day.\n",
+  util_baseline_daily_cost, util_sensitivity_daily_cost,
+  util_incremental_daily_cost
+))
+cat("Utilization is theoretical; this comparison does not predict waiting times\n")
+cat("or guarantee an 80% service buffer. The minimum-cost answer is unchanged.\n")
+
+write.csv(
+  util_sensitivity_table,
+  file.path(summary_output_dir, "optional_english_utilization_sensitivity.csv"),
+  row.names = FALSE
+)
