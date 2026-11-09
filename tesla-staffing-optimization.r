@@ -4008,9 +4008,25 @@ stopifnot(
   all(util_sensitivity_table$reduction_percentage_points >= -1e-8)
 )
 
+# Use the same readable table for the console file and the deck image.
+util_sensitivity_display <- data.frame(
+  `Time block` = util_sensitivity_table$time_block,
+  `Baseline utilization` = sprintf(
+    "%.1f%%", util_sensitivity_table$baseline_utilization_pct
+  ),
+  `With +1 English FT` = sprintf(
+    "%.1f%%", util_sensitivity_table$plus_one_utilization_pct
+  ),
+  `Reduction (pp)` = sprintf(
+    "%.1f", util_sensitivity_table$reduction_percentage_points
+  ),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+
 cat("\nOPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION\n")
 cat("Baseline plus one English full-time agent starting at 9 AM.\n")
-print(util_sensitivity_table, row.names = FALSE, digits = 4)
+print(util_sensitivity_display, row.names = FALSE, right = FALSE)
 cat(sprintf(
   "\nBaseline cost: $%.2f/day; optional scenario: $%.2f/day; increase: $%.2f/day.\n",
   util_baseline_daily_cost, util_sensitivity_daily_cost,
@@ -4024,3 +4040,19 @@ write.csv(
   file.path(summary_output_dir, "optional_english_utilization_sensitivity.csv"),
   row.names = FALSE
 )
+
+# Final numbered table image, matching the existing summary table style.
+# The cost increment comes from the model's existing call-handling wages.
+render_table_png(
+  util_sensitivity_display,
+  "20_optional_english_utilization_sensitivity.png",
+  sprintf(
+    "Optional: +1 English FT at 9 AM (+$%.0f/day)",
+    util_incremental_daily_cost
+  ),
+  c(0.28, 0.25, 0.25, 0.22),
+  11
+)
+
+# Finish and flush the summary file opened in Section 12S.
+sink()
