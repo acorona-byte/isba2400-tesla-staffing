@@ -4024,7 +4024,7 @@ util_sensitivity_display <- data.frame(
   stringsAsFactors = FALSE
 )
 
-cat("\nOPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION\n")
+cat("OPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION\n")
 cat("Baseline plus one English full-time agent starting at 9 AM.\n")
 print(util_sensitivity_display, row.names = FALSE, right = FALSE)
 cat(sprintf(
@@ -4034,12 +4034,6 @@ cat(sprintf(
 ))
 cat("Utilization is theoretical; this comparison does not predict waiting times\n")
 cat("or guarantee an 80% service buffer. The minimum-cost answer is unchanged.\n")
-
-write.csv(
-  util_sensitivity_table,
-  file.path(summary_output_dir, "optional_english_utilization_sensitivity.csv"),
-  row.names = FALSE
-)
 
 # Final numbered table image, matching the existing summary table style.
 # The cost increment comes from the model's existing call-handling wages.
