@@ -2113,9 +2113,9 @@ answer_key_table <-
     `What Alex asked` = c(
       "English-/Spanish-only agent-equivalents by shift",
       "English-/Spanish-only minimum cost",
-      "Hires with 1 PM / 3 PM English cap",
+      "Staffing with 1 PM / 3 PM English cap",
       "Minimum cost with the cap",
-      "Hires if every agent is bilingual",
+      "Staffing if all agents are bilingual",
       "Bilingual minimum cost",
       "Max bilingual wage premium",
       "Cost if calls grow 10-30%"
@@ -2123,13 +2123,13 @@ answer_key_table <-
     `Our answer` = c(
       paste0(
         baseline_ft_total,
-        " FT (",
+        " FT-equivalents (",
         baseline_ft_english,
         " English, ",
         baseline_ft_spanish,
         " Spanish) + ",
         baseline_pt_english,
-        " PT"
+        " PT-equivalents"
       ),
       paste0(
         "$",
@@ -2142,13 +2142,13 @@ answer_key_table <-
       ),
       paste0(
         restricted_ft_total,
-        " FT (",
+        " FT-equivalents (",
         restricted_ft_english,
         " English, ",
         restricted_ft_spanish,
         " Spanish) + ",
         restricted_pt_english,
-        " PT"
+        " PT-equivalents"
       ),
       paste0(
         "$",
@@ -2168,9 +2168,9 @@ answer_key_table <-
       ),
       paste0(
         bilingual_ft_total,
-        " FT + ",
+        " FT-equivalents + ",
         bilingual_pt_total,
-        " PT"
+        " PT-equivalents"
       ),
       paste0(
         "$",
@@ -2479,7 +2479,7 @@ operating_rules_table <-
 render_table_png(
   operating_rules_table,
   "04_operating_rules_table.png",
-  "Each hire covers a fixed set of blocks",
+  "Each staffing option covers fixed blocks",
   c(
     0.18,
     rep(
@@ -2513,14 +2513,14 @@ objective_symbols_table <-
       "Part-time start times",
       "English, Spanish full-timers starting at t",
       "English part-timers starting at k",
-      "Cost per hire, set by start time"
+      "Cost per agent-equivalent, by start time"
     ),
     Values = c(
       "Minimize",
       "7, 9, 11 AM · 1, 3 PM",
       "3, 5 PM",
-      "Agents hired (whole numbers)",
-      "Agents hired (whole numbers)",
+      "Continuous agent-equivalents (unrounded)",
+      "Continuous agent-equivalents (unrounded)",
       "$120 at 7, 9, 11 · $150 at 1, 3 · $180 at 5"
     ),
     stringsAsFactors = FALSE
@@ -2553,8 +2553,8 @@ constraint_symbols_table <-
       "Calls one agent handles per 2-hour block",
       "Calls in block t",
       "Language share of calls",
-      "Hires on calls during block t",
-      "Agents hired: E, S, P or B"
+      "Active agent-equivalents in block t",
+      "Continuous staffing: E, S, P or B"
     ),
     Values = c(
       agent_capacity_per_block,
@@ -3145,7 +3145,7 @@ barplot(
   border = NA,
   names.arg = demand$time_block,
   ylab = "Calls per 2-hour block",
-  main = "Pooling removes the idle cushion"
+  main = "Pooling reduces unused call capacity"
 )
 
 legend(
@@ -3341,7 +3341,7 @@ business_case_table <-
 render_table_png(
   business_case_table,
   "15_business_case_metrics.png",
-  "What bilingual staffing is worth in a year",
+  "Illustrative bilingual savings at continuous LP costs",
   c(
     0.40,
     0.20,
@@ -3521,7 +3521,7 @@ growth_positions <-
     col = growth_colors,
     border = NA,
     ylab = "Daily on-call cost ($)",
-    main = "If calls grow 30%, cost grows about 25%",
+    main = sprintf("Calls +30%%: LP cost +%.1f%%", 100 * (growth_results$minimum_cost[length(growth_rates)] / baseline_model$objval - 1)),
     ylim = c(
       0,
       max(
