@@ -19,7 +19,7 @@
 #   Develop and validate an R-based optimization model for the Tesla support
 #   staffing case.
 #
-#   The model will determine the lowest-cost staffing plan capable of meeting
+#   The model will determine the lowest-cost staffing allocation capable of meeting
 #   forecast customer-support demand while accounting for:
 #
 #     - Full-time and part-time staffing rules
@@ -69,7 +69,7 @@
 # REQUIRED PACKAGE
 # =============================================================================
 #
-# This project uses the lpSolve package for integer linear optimization.
+# This project uses lpSolve for continuous linear programming (fractional staffing).
 #
 # If lpSolve is not already installed, run this once in the R console:
 #
@@ -354,7 +354,7 @@ max_english_ft_start_3pm <- 1
 # pattern will also be assigned its corresponding call-handling cost.
 
 # These costs will then be used in the objective function to determine
-# the lowest-cost feasible staffing plan.
+# the lowest-cost feasible staffing allocation.
 
 
 
@@ -379,7 +379,7 @@ max_english_ft_start_3pm <- 1
 #   Full-time scheduling rules
 #   Part-time scheduling rules
 #   Shift-start restrictions
-#   Nonnegative integer staffing levels
+#   Nonnegative continuous staffing levels
 #
 # The actual mathematical objective function will be created after the
 # staffing coverage matrix, staffing costs, and decision variables
@@ -719,7 +719,7 @@ baseline_model <- lpSolve::lp(
   const.mat = constraint_matrix,
   const.dir = constraint_directions,
   const.rhs = constraint_rhs,
-  all.int = TRUE
+  all.int = FALSE
 )
 
 # A status of 0 indicates that an optimal solution was found.
@@ -745,7 +745,7 @@ baseline_results <- data.frame(
 )
 
 cat("\n============================================================\n")
-cat("BASELINE OPTIMAL STAFFING PLAN\n")
+cat("BASELINE OPTIMAL STAFFING ALLOCATION\n")
 cat("============================================================\n\n")
 
 print(
@@ -778,7 +778,7 @@ cat(
 #
 # Questions:
 #
-#   C. What staffing plan minimizes cost?
+#   C. What staffing allocation minimizes cost?
 #
 #   D. What is the resulting minimum cost?
 # -----------------------------------------------------------------------------
@@ -878,7 +878,7 @@ restricted_model <- lpSolve::lp(
   const.mat = restricted_constraint_matrix,
   const.dir = restricted_constraint_directions,
   const.rhs = restricted_constraint_rhs,
-  all.int = TRUE
+  all.int = FALSE
 )
 
 
@@ -911,7 +911,7 @@ restricted_results <- data.frame(
 
 
 cat("\n============================================================\n")
-cat("RESTRICTED-START OPTIMAL STAFFING PLAN\n")
+cat("RESTRICTED-START OPTIMAL STAFFING ALLOCATION\n")
 cat("============================================================\n\n")
 
 print(
@@ -945,7 +945,7 @@ cat(
 #
 # Questions:
 #
-#   E. What FT/PT staffing plan minimizes operating cost?
+#   E. What FT/PT staffing allocation minimizes operating cost?
 #
 #   F. What is the resulting minimum operating cost?
 # -----------------------------------------------------------------------------
@@ -1040,7 +1040,7 @@ bilingual_model <- lpSolve::lp(
   const.mat = bilingual_constraint_matrix,
   const.dir = bilingual_constraint_directions,
   const.rhs = bilingual_constraint_rhs,
-  all.int = TRUE
+  all.int = FALSE
 )
 
 
@@ -1073,7 +1073,7 @@ bilingual_results <- data.frame(
 
 
 cat("\n============================================================\n")
-cat("BILINGUAL OPTIMAL STAFFING PLAN\n")
+cat("BILINGUAL OPTIMAL STAFFING ALLOCATION\n")
 cat("============================================================\n\n")
 
 print(
@@ -1157,7 +1157,7 @@ cat(
 # 13. MANAGERIAL EXTENSION - DEMAND GROWTH SENSITIVITY
 # -----------------------------------------------------------------------------
 #
-# This section tests how the optimal staffing plan changes if customer-support
+# This section tests how the optimal staffing allocation changes if customer-support
 # demand increases while all staffing rules, language shares, productivity,
 # and wage rates remain unchanged.
 #
@@ -1217,7 +1217,7 @@ for (g in growth_rates) {
     const.mat = constraint_matrix,
     const.dir = constraint_directions,
     const.rhs = growth_rhs,
-    all.int = TRUE
+    all.int = FALSE
   )
 
 
@@ -2111,7 +2111,7 @@ answer_key_table <-
       "H"
     ),
     `What Alex asked` = c(
-      "English-/Spanish-only hires by shift",
+      "English-/Spanish-only agent-equivalents by shift",
       "English-/Spanish-only minimum cost",
       "Hires with 1 PM / 3 PM English cap",
       "Minimum cost with the cap",
@@ -2564,7 +2564,7 @@ constraint_symbols_table <-
       ),
       "English 0.8 · Spanish 0.2 · Bilingual 1.0",
       "Defined by the coverage matrix",
-      "Whole numbers >= 0"
+      "Continuous values >= 0"
     ),
     stringsAsFactors = FALSE
   )
@@ -2679,7 +2679,7 @@ baseline_staffing_table <-
       `PT English` = baseline_pt_english,
       `On calls` = paste0(
         baseline_total_agents,
-        " hires"
+        " agent-equivalents"
       ),
       check.names = FALSE
     )
@@ -2689,7 +2689,7 @@ baseline_staffing_table <-
 render_table_png(
   baseline_staffing_table,
   "07_baseline_staffing_table.png",
-  "Scenario I: optimal staffing",
+  "Scenario I: continuous staffing",
   c(
     0.12,
     0.14,
@@ -3219,7 +3219,7 @@ plot(
   col = tesla_red,
   xlab = "Uniform bilingual wage premium (%)",
   ylab = "Daily on-call cost ($)",
-  main = "We can pay bilingual agents up to 9% more"
+  main = sprintf("Bilingual premium breaks even at %.1f%%", max_bilingual_premium_pct)
 )
 
 abline(
@@ -3262,7 +3262,7 @@ business_case_table <-
       "Annual savings vs. baseline",
       "Annual savings vs. restricted",
       "Bilingual cost per call",
-      "Idle agent time removed"
+      "Unused call capacity reduced"
     ),
     Value = c(
       paste0(
@@ -3544,7 +3544,7 @@ text(
     ),
     "\n",
     growth_total_agents,
-    " hires"
+    " agent-equivalents"
   ),
   col = tesla_dark
 )
@@ -3850,7 +3850,7 @@ cat(
 )
 
 cat(
-  "Idle agent time removed:         ",
+  "Unused call capacity reduction:  ",
   round(
     idle_agent_hours_removed,
     1
@@ -3938,84 +3938,92 @@ cat(
 )
 
 # -----------------------------------------------------------------------------
-# 12T. OPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION
+# 12T. CONTINUOUS UTILIZATION AND ROUNDING AUDIT
 # -----------------------------------------------------------------------------
-# Professor feedback: retain minimum staffing cost as the main answer.
-# This is a post-solution comparison, not a new objective or constraint.
-# Add one English FT agent starting at 9 AM to the returned baseline schedule.
-# The existing rotation covers calls at 9-11 AM and 1-3 PM only.
-# Utilization = English forecast calls / English theoretical call capacity.
-# It does not predict waiting times or guarantee a service level. The roughly
-# 80% utilization discussion is context only, not an imposed threshold.
-# Alternative optimal schedules can produce different utilization percentages.
+# Primary course answers A-G use unrounded continuous LP costs.
+# Fractional agents are capacity-equivalents, NOT whole-person hires.
+# Utilization is forecast demand divided by scheduled theoretical capacity.
+# A rounded solution must be checked against EVERY constraint before use.
+# No queue-time or service-level guarantee is implied.
+# -----------------------------------------------------------------------------
 
-util_sensitivity_solution <- baseline_solution
-util_sensitivity_solution["eng_ft_9am"] <-
-  util_sensitivity_solution["eng_ft_9am"] + 1
+# Compare original fractional solutions with naive nearest-integer rounding.
+audit_rounding <- function(label, solution, costs, mat, rhs, directions) {
+  rounded <- round(solution)
+  offered <- as.numeric(mat %*% rounded)
+  needed <- as.numeric(rhs)
+  ok <- ifelse(directions == ">=", offered >= needed - 1e-7,
+               offered <= needed + 1e-7)
+  constraints <- data.frame(
+    constraint = rownames(mat),
+    direction = directions,
+    required = needed,
+    rounded_output = offered,
+    feasible = ok,
+    stringsAsFactors = FALSE
+  )
+  cat("\n", label, "\n", sep = "")
+  cat(sprintf("Continuous optimal cost: $%.2f\n", sum(solution * costs)))
+  cat(sprintf("Rounded-nearest candidate cost: $%.2f\n", sum(rounded * costs)))
+  cat(sprintf("Rounded candidate covers all constraints: %s\n", all(ok)))
+  if (!all(ok)) print(constraints[!ok, ], row.names = FALSE)
+  list(rounded = rounded, checks = constraints, feasible = all(ok))
+}
 
-# Select English FT and PT only; do not pool Spanish capacity into this measure.
+baseline_rounding <- audit_rounding(
+  "BASELINE ROUNDING AUDIT", baseline_solution, baseline_costs,
+  constraint_matrix, constraint_rhs, constraint_directions
+)
+restricted_rounding <- audit_rounding(
+  "RESTRICTED ROUNDING AUDIT", restricted_solution, baseline_costs,
+  restricted_constraint_matrix, restricted_constraint_rhs,
+  restricted_constraint_directions
+)
+bilingual_rounding <- audit_rounding(
+  "BILINGUAL ROUNDING AUDIT", bilingual_solution, bilingual_costs,
+  bilingual_constraint_matrix, bilingual_constraint_rhs,
+  bilingual_constraint_directions
+)
+
+# English staffing utilization in the BASELINE CONTINUOUS model.
 util_english_vars <- c(english_ft_vars, english_pt_vars)
 util_english_patterns <- sub("^eng_", "", util_english_vars)
 util_coverage <- coverage_matrix[util_english_patterns, , drop = FALSE]
-
 util_baseline_capacity <- as.numeric(
   baseline_solution[util_english_vars] %*% util_coverage
 ) * agent_capacity_per_block
+stopifnot(all(util_baseline_capacity > 0))
+
+# Illustrative extra 9 AM shift: NOT a new optimization or a claim
+# that the continuous model is a ready-to-deploy roster.
+util_sensitivity_solution <- baseline_solution
+util_sensitivity_solution["eng_ft_9am"] <-
+  util_sensitivity_solution["eng_ft_9am"] + 1
 util_sensitivity_capacity <- as.numeric(
   util_sensitivity_solution[util_english_vars] %*% util_coverage
 ) * agent_capacity_per_block
 
-# Positive capacity is required to report meaningful utilization percentages.
-stopifnot(
-  all(is.finite(util_baseline_capacity)),
-  all(util_baseline_capacity > 0),
-  all(is.finite(util_sensitivity_capacity)),
-  all(util_sensitivity_capacity > 0)
-)
-
 util_sensitivity_table <- data.frame(
   time_block = demand$time_block,
   english_calls = demand$english_calls_per_block,
-  baseline_capacity = util_baseline_capacity,
+  continuous_capacity = util_baseline_capacity,
   plus_one_capacity = util_sensitivity_capacity,
-  baseline_utilization_pct =
+  continuous_utilization_pct =
     100 * demand$english_calls_per_block / util_baseline_capacity,
   plus_one_utilization_pct =
     100 * demand$english_calls_per_block / util_sensitivity_capacity
 )
 util_sensitivity_table$reduction_percentage_points <-
-  util_sensitivity_table$baseline_utilization_pct -
+  util_sensitivity_table$continuous_utilization_pct -
   util_sensitivity_table$plus_one_utilization_pct
 
-util_baseline_daily_cost <- sum(
-  baseline_solution * baseline_costs[names(baseline_solution)]
-)
-util_sensitivity_daily_cost <- sum(
-  util_sensitivity_solution * baseline_costs[names(util_sensitivity_solution)]
-)
-util_incremental_daily_cost <-
-  util_sensitivity_daily_cost - util_baseline_daily_cost
-
-# Validate the change against the existing shift coverage and wage definitions.
-stopifnot(
-  isTRUE(all.equal(
-    util_sensitivity_capacity - util_baseline_capacity,
-    as.numeric(coverage_matrix["ft_9am", ]) * agent_capacity_per_block
-  )),
-  isTRUE(all.equal(
-    util_incremental_daily_cost,
-    unname(baseline_costs["eng_ft_9am"])
-  )),
-  all(util_sensitivity_table$reduction_percentage_points >= -1e-8)
-)
-
-# Use the same readable table for the console file and the deck image.
+util_incremental_daily_cost <- unname(baseline_costs["eng_ft_9am"])
 util_sensitivity_display <- data.frame(
   `Time block` = util_sensitivity_table$time_block,
-  `Baseline utilization` = sprintf(
-    "%.1f%%", util_sensitivity_table$baseline_utilization_pct
+  `Continuous LP utilization` = sprintf(
+    "%.1f%%", util_sensitivity_table$continuous_utilization_pct
   ),
-  `With +1 English FT` = sprintf(
+  `With +1 at 9 AM` = sprintf(
     "%.1f%%", util_sensitivity_table$plus_one_utilization_pct
   ),
   `Reduction (pp)` = sprintf(
@@ -4024,30 +4032,41 @@ util_sensitivity_display <- data.frame(
   check.names = FALSE,
   stringsAsFactors = FALSE
 )
-
-cat("OPTIONAL UTILIZATION SENSITIVITY - NOT PART OF THE OPTIMIZATION\n")
-cat("Baseline plus one English full-time agent starting at 9 AM.\n")
+cat("\nOPTIONAL CONTINUOUS CAPACITY SENSITIVITY\n")
 print(util_sensitivity_display, row.names = FALSE, right = FALSE)
 cat(sprintf(
-  "\nBaseline cost: $%.2f/day; optional scenario: $%.2f/day; increase: $%.2f/day.\n",
-  util_baseline_daily_cost, util_sensitivity_daily_cost,
+  "Illustrative additional 9 AM shift: +$%.2f of modeled call-time cost.\n",
   util_incremental_daily_cost
 ))
-cat("Utilization is theoretical; this comparison does not predict waiting times\n")
-cat("or guarantee an 80% service buffer. The minimum-cost answer is unchanged.\n")
-
-# Final numbered table image, matching the existing summary table style.
-# The cost increment comes from the model's existing call-handling wages.
+cat("These ratios are workload/capacity, not observed service levels.\n")
 render_table_png(
   util_sensitivity_display,
   "20_optional_english_utilization_sensitivity.png",
-  sprintf(
-    "Optional: +1 English FT at 9 AM (+$%.0f/day)",
-    util_incremental_daily_cost
-  ),
-  c(0.28, 0.25, 0.25, 0.22),
+  sprintf("Continuous baseline: +1 at 9 AM (+$%.0f/day)", util_incremental_daily_cost),
+  c(0.26, 0.29, 0.24, 0.21),
   11
 )
 
-# Finish and flush the summary file opened in Section 12S.
+# 12U. SOURCE-OF-TRUTH VALIDATION
+# Compare with team meeting-note figures, allowing minor solver tolerance.
+# These are checks, not replacements for calculated results.
+expected_course_costs <- c(baseline = 4625, restricted = 4665, bilingual = 4525)
+actual_course_costs <- c(
+  baseline = baseline_model$objval,
+  restricted = restricted_model$objval,
+  bilingual = bilingual_model$objval
+)
+stopifnot(all(abs(actual_course_costs - expected_course_costs) < 0.25))
+cat("\nCOURSE LP COST RECONCILIATION\n")
+print(data.frame(
+  scenario = names(actual_course_costs),
+  calculated = round(actual_course_costs, 4),
+  meeting_reference = expected_course_costs,
+  difference = round(actual_course_costs - expected_course_costs, 4)
+), row.names = FALSE)
+cat(sprintf(
+  "Question G: %.2f%% (continuous/unrounded).\n",
+  max_bilingual_premium_pct
+))
+
 sink()
