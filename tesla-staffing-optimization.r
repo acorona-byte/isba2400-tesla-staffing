@@ -86,6 +86,7 @@ if (!requireNamespace("lpSolve", quietly = TRUE)) {
 
 
 
+
 # -----------------------------------------------------------------------------
 # 1. LOAD RAW CASE DATA
 # -----------------------------------------------------------------------------
@@ -1644,7 +1645,7 @@ solve_mixed_team <- function(max_bilingual = Inf, premium = 0, demand_scale = 1)
     stop("Mixed-team optimization did not return an optimal solution.")
   }
 
-  solution <- round(model$solution, 6)
+  solution <- model$solution
   names(solution) <- var_names
 
   list(
@@ -1765,8 +1766,8 @@ cat(
 #
 #   Output:
 #
-#     output/summary_output/png/*.png
-#     output/summary_output/summary_output.txt
+#     slide_pngs/*.png
+#     console_output.txt
 #
 # =============================================================================
 
@@ -1776,17 +1777,7 @@ cat(
 # 14A. OUTPUT FOLDERS
 # -----------------------------------------------------------------------------
 
-summary_output_dir <-
-  file.path(
-    "output",
-    "summary_output"
-  )
-
-summary_png_dir <-
-  file.path(
-    summary_output_dir,
-    "png"
-  )
+summary_png_dir <- "slide_pngs"
 
 dir.create(
   summary_png_dir,
@@ -1794,15 +1785,7 @@ dir.create(
   showWarnings = FALSE
 )
 
-# Remove charts from earlier runs so the folder matches the current deck.
-
-unlink(
-  list.files(
-    summary_png_dir,
-    pattern = "\\.png$",
-    full.names = TRUE
-  )
-)
+# Each run overwrites the seven named slide charts in this folder.
 
 
 
@@ -1997,128 +1980,6 @@ chart_title <- function(title, subtitle = NULL) {
           col = tesla_text_gray)
   }
 }
-
-# Render a presentation-style table to PNG.
-
-render_table_png <- function(
-  table_data,
-  file_name,
-  title,
-  column_widths = NULL,
-  font_size = 10,
-  note = NULL
-) {
-
-  open_png(file_name)
-
-  grid::grid.newpage()
-
-  grid::grid.text(
-    title,
-    x = grid::unit(0.03, "npc"),
-    y = grid::unit(0.94, "npc"),
-    just = c("left", "center"),
-    gp = grid::gpar(
-      col = tesla_dark,
-      fontsize = 24,
-      fontface = "bold"
-    )
-  )
-
-  n_body_rows <- nrow(table_data)
-  n_rows <- n_body_rows + 1
-  n_cols <- ncol(table_data)
-
-  if (is.null(column_widths)) {
-    column_widths <- rep(1 / n_cols, n_cols)
-  }
-
-  column_widths <- column_widths / sum(column_widths)
-
-  left <- 0.03
-  right <- 0.97
-  top <- 0.86
-  bottom <- if (is.null(note)) 0.08 else 0.14
-
-  x_edges <-
-    left +
-    c(0, cumsum(column_widths)) *
-    (right - left)
-
-  row_height <- min((top - bottom) / n_rows, 0.085)
-
-  draw_cell <- function(x0, x1, y_mid, text, fill, color, face) {
-
-    grid::grid.rect(
-      x = grid::unit((x0 + x1) / 2, "npc"),
-      y = grid::unit(y_mid, "npc"),
-      width = grid::unit(x1 - x0, "npc"),
-      height = grid::unit(row_height, "npc"),
-      gp = grid::gpar(fill = fill, col = tesla_light_gray, lwd = 0.6)
-    )
-
-    # Wrap long text to roughly fit the column width.
-    wrap_width <- max(8, floor((x1 - x0) * 1500 / (font_size * 0.62)))
-
-    grid::grid.text(
-      paste(strwrap(text, width = wrap_width), collapse = "\n"),
-      x = grid::unit(x0 + 0.008, "npc"),
-      y = grid::unit(y_mid, "npc"),
-      just = c("left", "center"),
-      gp = grid::gpar(col = color, fontsize = font_size, fontface = face)
-    )
-  }
-
-  # Header row.
-
-  for (column_index in seq_len(n_cols)) {
-    draw_cell(
-      x_edges[column_index],
-      x_edges[column_index + 1],
-      top - row_height / 2,
-      names(table_data)[column_index],
-      tesla_dark,
-      tesla_white,
-      "bold"
-    )
-  }
-
-  # Body rows (alternating fill, as in the deck tables).
-
-  for (row_index in seq_len(n_body_rows)) {
-
-    row_mid <- top - row_height * row_index - row_height / 2
-
-    fill_color <-
-      if (row_index %% 2 == 1) tesla_white else tesla_lighter_gray
-
-    for (column_index in seq_len(n_cols)) {
-      draw_cell(
-        x_edges[column_index],
-        x_edges[column_index + 1],
-        row_mid,
-        as.character(table_data[row_index, column_index]),
-        fill_color,
-        tesla_dark,
-        "plain"
-      )
-    }
-  }
-
-  if (!is.null(note)) {
-    grid::grid.text(
-      paste(strwrap(note, width = 150), collapse = "\n"),
-      x = grid::unit(0.03, "npc"),
-      y = grid::unit(0.06, "npc"),
-      just = c("left", "center"),
-      gp = grid::gpar(col = tesla_text_gray, fontsize = 9)
-    )
-  }
-
-  dev.off()
-}
-
-# Render a horizontal cost chart (slides 11, 13 and 15).
 
 render_horizontal_cost_chart <- function(
   labels,
@@ -2479,7 +2340,7 @@ premium_wage_after_5pm <- wage_after_5pm * (1 + max_bilingual_premium)
 
 # ----- Demand growth (Question H) -----
 
-growth_results$calls_per_day <- round(daily_calls * (1 + growth_rates))
+growth_results$calls_per_day <- daily_calls * (1 + growth_rates)
 growth_results$cost_change_pct <-
   (growth_results$minimum_cost / baseline_cost - 1) * 100
 growth_results$cost_per_call <-
@@ -2558,14 +2419,6 @@ answer_key_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  answer_key_table,
-  "02_answer_key_table.png",
-  "Every answer at a glance",
-  c(0.09, 0.36, 0.45, 0.10),
-  11,
-  note = "Staffing = rounded to whole people per shift. Costs = continuous LP solution."
-)
 
 
 
@@ -2595,13 +2448,6 @@ recommendation_table <- data.frame(
   stringsAsFactors = FALSE
 )
 
-render_table_png(
-  recommendation_table,
-  "03_recommendation_metrics.png",
-  "Add bilingual agents where queues are thin",
-  c(0.18, 0.52, 0.30),
-  12
-)
 
 
 
@@ -2637,14 +2483,6 @@ historical_context_table <- data.frame(
   stringsAsFactors = FALSE
 )
 
-render_table_png(
-  historical_context_table,
-  "04_2018_financial_context.png",
-  "Selling more cars than ever, still losing money",
-  c(0.35, 0.25, 0.40),
-  12,
-  note = "Sources: Tesla Q4 2018 deliveries release; Tesla Form 10-K FY2018; Paul Tan's Automotive News (Jan. 2019)."
-)
 
 
 
@@ -2740,17 +2578,6 @@ for (block_index in seq_len(nrow(demand))) {
 
 operating_rules_table$Cost <- money(cost_per_option[rownames(coverage_matrix)])
 
-render_table_png(
-  operating_rules_table,
-  "07_operating_rules_table.png",
-  "Each hire covers a fixed set of blocks",
-  c(0.20, rep(0.09, 7), 0.13),
-  10,
-  note = paste0("Each agent handles ", agent_capacity_per_block,
-                " calls per 2-hour block. A block on calls costs ",
-                money(2 * wage_before_5pm), " before 5 PM and ",
-                money(2 * wage_after_5pm), " after 5 PM. Only time on calls counts.")
-)
 
 
 
@@ -2781,14 +2608,6 @@ objective_symbols_table <- data.frame(
   stringsAsFactors = FALSE
 )
 
-render_table_png(
-  objective_symbols_table,
-  "08_objective_symbols_table.png",
-  "Minimize the daily cost of time on calls",
-  c(0.12, 0.43, 0.45),
-  12,
-  note = "Z = sum over t of c_t (E_t + S_t) + sum over k of c_k P_k. Bilingual model: E, S and P become one bilingual team."
-)
 
 constraint_symbols_table <- data.frame(
   Symbol = c("r", "d", "s", "A(t)", "x"),
@@ -2810,14 +2629,6 @@ constraint_symbols_table <- data.frame(
   stringsAsFactors = FALSE
 )
 
-render_table_png(
-  constraint_symbols_table,
-  "09_constraint_symbols_table.png",
-  "Every call, in every block, is covered",
-  c(0.12, 0.43, 0.45),
-  12,
-  note = "r x sum of x_j over A(t) >= s x d_t for every block t. 7 blocks x 2 languages = 14 rules with English-only + Spanish-only agents, 7 in the bilingual model."
-)
 
 
 
@@ -2831,14 +2642,6 @@ baseline_staffing_table <- build_staffing_table(
        `PT English` = "eng_pt_")
 )
 
-render_table_png(
-  baseline_staffing_table,
-  "10_scenario_I_staffing_table.png",
-  paste0("English-only + Spanish-only: ", baseline_total_agents, " hires"),
-  c(0.25, 0.25, 0.25, 0.25),
-  12,
-  note = "Rounded to whole people as the case asks; costs use the continuous solution. The rounded schedule leaves some blocks slightly short."
-)
 
 restricted_staffing_table <- build_staffing_table(
   restricted_rounded,
@@ -2846,28 +2649,12 @@ restricted_staffing_table <- build_staffing_table(
        `PT English` = "eng_pt_")
 )
 
-render_table_png(
-  restricted_staffing_table,
-  "12_scenario_II_staffing_table.png",
-  "Cap late English starts and the plan shifts earlier",
-  c(0.25, 0.25, 0.25, 0.25),
-  12,
-  note = "Only one English FT agent may start at 1 PM, and one at 3 PM. Rounded to whole people; costs use the continuous solution."
-)
 
 bilingual_staffing_table <- build_staffing_table(
   bilingual_rounded,
   list(`FT bilingual` = "bil_ft_", `PT bilingual` = "bil_pt_")
 )
 
-render_table_png(
-  bilingual_staffing_table,
-  "14_scenario_III_staffing_table.png",
-  "One bilingual team covers every caller",
-  c(0.34, 0.33, 0.33),
-  12,
-  note = "Any agent can take any caller, so we staff to total demand. Rounded to whole people; costs use the continuous solution."
-)
 
 
 
@@ -3023,14 +2810,6 @@ scale_context_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  scale_context_table,
-  "17_scale_context.png",
-  "The fleet is growing faster than support",
-  c(0.38, 0.22, 0.22, 0.18),
-  12,
-  note = "We don't forecast calls from sales; we use this growth to stress-test staffing at +10%, +20% and +30% call demand."
-)
 
 
 
@@ -3067,14 +2846,6 @@ growth_sensitivity_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  growth_sensitivity_table,
-  "18_growth_sensitivity_table.png",
-  "Cost scales with demand; staffing grows in step",
-  c(0.22, 0.24, 0.24, 0.30),
-  12,
-  note = "FT + PT rounded shift by shift (whole people). Daily cost uses the continuous LP solution."
-)
 
 
 
@@ -3118,16 +2889,6 @@ service_display_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  service_display_table,
-  "19_service_level_table.png",
-  "Rounded utilization by block and queue",
-  rep(1, 8),
-  11,
-  note = paste0("Bilingual peaks at ", pct(max(bilingual_util_rounded, na.rm = TRUE)),
-                " when rounded the same way: one shared queue absorbs the rounding. ",
-                "Spanish 7-9 PM has no Spanish agent on calls in the rounded schedule.")
-)
 
 
 
@@ -3151,17 +2912,6 @@ plan_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  plan_table,
-  "20_recommended_plan.png",
-  "Shift toward one bilingual team, seat by seat",
-  c(0.16, 0.28, 0.28, 0.28),
-  12,
-  note = paste0("Transition: start with the ", mixed_needed_k,
-                " bilingual seats, then fill vacancies with bilingual hires. Target: ",
-                money(bilingual_cost), "/day. Contingency only: English start limit plan, ",
-                money(restricted_cost), "/day.")
-)
 
 
 
@@ -3195,17 +2945,6 @@ business_case_table <- data.frame(
   stringsAsFactors = FALSE
 )
 
-render_table_png(
-  business_case_table,
-  "21_business_case_metrics.png",
-  "What a bilingual structure is worth in a year",
-  c(0.32, 0.20, 0.48),
-  12,
-  note = paste0("Our extrapolation: ", weekdays_per_year,
-                " weekdays/year, on-call salary only; excludes benefits, recruiting and training. ",
-                "On-call hours: ", round(baseline_on_call_hours, 1), " vs. ",
-                round(bilingual_on_call_hours, 1), ".")
-)
 
 
 
@@ -3231,14 +2970,6 @@ efficiency_levers_table <- data.frame(
   check.names = FALSE
 )
 
-render_table_png(
-  efficiency_levers_table,
-  "22_efficiency_levers.png",
-  "Fewer calls, faster calls, more upgrades",
-  c(0.40, 0.60),
-  12,
-  note = "Ideas to test next, outside the optimization model."
-)
 
 
 
@@ -3254,50 +2985,6 @@ render_table_png(
 #
 # Rounding audit: checks whether naive rounding still meets every constraint.
 # -----------------------------------------------------------------------------
-
-a1_matrix <- t(as.matrix(continuous_block_utilization[, c("II", "I", "III")]))
-
-render_vertical_bar_chart(
-  values = a1_matrix,
-  group_labels = c("7-9", "9-11", "11-1", "1-3", "3-5", "5-7", "7-9"),
-  file_name = "A1_continuous_utilization_by_block.png",
-  title = "Bilingual keeps utilization the most balanced",
-  colors = scenario_colors[c("II", "I", "III")],
-  value_labels = ifelse(a1_matrix < 99.95, paste0(round(a1_matrix), "%"), ""),
-  ylim = c(50, 105),
-  y_axis_labels = function(x) paste0(x, "%"),
-  target_line = utilization_target_pct,
-  target_label = paste0(utilization_target_pct, "% target"),
-  legend_labels = c("II - English start limit", "I - today", "III - bilingual"),
-  subtitle = paste0(
-    "Average - slowest block: II ", pct(restricted_utilization_pct), " - ",
-    pct(lowest_block_utilization["II"]), " | I ", pct(baseline_utilization_pct),
-    " - ", pct(lowest_block_utilization["I"]), " | III ",
-    pct(bilingual_utilization_pct), " - ", pct(lowest_block_utilization["III"])
-  ),
-  note = "Utilization = calls / capacity (agents on calls x 12) per block, continuous LP. Unlabeled bars are 100%. Axis starts at 50%."
-)
-
-render_vertical_bar_chart(
-  values = mixed_team_curve$whole_person_cost,
-  group_labels = mixed_team_curve$bilingual_agents,
-  file_name = "A2_mixed_team_cost_curve.png",
-  title = "A few bilingual agents capture all the savings",
-  colors = ifelse(
-    mixed_team_curve$bilingual_agents == 0, tesla_dark_gray,
-    ifelse(mixed_team_curve$bilingual_agents == mixed_needed_k,
-           tesla_red, tesla_soft_gray)
-  ),
-  value_labels = money(mixed_team_curve$whole_person_cost),
-  ylim = c(4500, 5200),
-  y_label = "Daily cost, whole people",
-  y_axis_labels = money,
-  subtitle = paste0(mixed_needed_k, " bilingual agents: -", money(mixed_daily_saving),
-                    "/day vs. ", money(mixed_separate_cost),
-                    ". Premium room: ~", round(mixed_breakeven_premium_pct), "%."),
-  note = "Bilingual agents added to an English-only + Spanish-only team. Whole-person (integer) schedules; axis starts at $4,500.00.",
-  space = 0.25
-)
 
 # Rounding audit: does nearest-integer staffing still meet every constraint?
 
@@ -3370,15 +3057,11 @@ if (!all(deck_checks)) {
 # -----------------------------------------------------------------------------
 #
 # Writes every calculation behind the deck, in slide order, with the logic
-# and assumptions, to output/summary_output/summary_output.txt
+# and assumptions, to console_output.txt
 # (also echoed to the console).
 # -----------------------------------------------------------------------------
 
-summary_console_path <-
-  file.path(
-    summary_output_dir,
-    "summary_output.txt"
-  )
+summary_console_path <- "console_output.txt"
 
 sink(
   summary_console_path,
@@ -3386,7 +3069,7 @@ sink(
 )
 
 # Wide console so tables print on one line.
-old_width <- options(width = 160)
+old_width <- options(width = 180, digits = 16)
 
 line_rule <- function(title) {
   cat("\n============================================================\n")
@@ -3415,10 +3098,11 @@ note("Daily costs, savings, cost per call, break-even premium, capacity and ",
      "Fractional agents are agent-equivalents, not people.")
 note("Staffing tables are rounded to whole people shift by shift (nearest ",
      "person, .5 rounds up). The rounded schedule is a hiring guide only; ",
-     "its cost is never reported because it leaves some blocks short.")
+     "its cost is reported only in the rounding audit because it leaves blocks short.")
 note("Whole-person analyses (service-level buffer, mixed team) are labeled ",
      "as such and only compared with other whole-person figures.")
 note("All dollar figures are shown with 2 decimals.")
+note("Fractional staffing is NOT shortened to two decimals before multiplication. For example, the first English shift uses 32 / 6 = 5.333333... agents; at $120 per shift its cost is exactly $640.00. Dollar totals ending in .00 do not imply rounded staffing.")
 
 line_rule("SLIDE 2 - ANSWER KEY")
 show_table(answer_key_table)
@@ -3471,6 +3155,9 @@ show_table(constraint_symbols_table)
 line_rule("SLIDES 10-11 - SCENARIO I: ENGLISH-ONLY + SPANISH-ONLY (A, B)")
 cat("Continuous LP solution (agent-equivalents):\n")
 show_table(baseline_results[baseline_results$agents > 1e-9, ])
+cat("Finance table: full-precision agents x shift cost; currency formatted only for display:\n")
+show_table(transform(baseline_results,
+                     cost_per_agent = money(cost_per_agent), total_cost = money(total_cost)))
 cat("Rounded staffing table (slide 10):\n")
 show_table(baseline_staffing_table)
 cat("A. ", baseline_ft_total, " FT (", baseline_ft_english, " English, ",
@@ -3494,6 +3181,9 @@ cat("   Cost per call: ", money(baseline_cost), " / ", daily_calls, " = ",
 line_rule("SLIDES 12-13 - SCENARIO II: ENGLISH START LIMIT (C, D)")
 cat("Continuous LP solution (agent-equivalents):\n")
 show_table(restricted_results[restricted_results$agents > 1e-9, ])
+cat("Finance table: full-precision agents x shift cost; currency formatted only for display:\n")
+show_table(transform(restricted_results,
+                     cost_per_agent = money(cost_per_agent), total_cost = money(total_cost)))
 cat("Rounded staffing table (slide 12):\n")
 show_table(restricted_staffing_table)
 cat("C. ", restricted_ft_total, " FT (", restricted_ft_english, " English, ",
@@ -3519,6 +3209,9 @@ note("Demand didn't change; flexibility did. Capping late English starts at ",
 line_rule("SLIDES 14-15 - SCENARIO III: BILINGUAL TEAM (E, F)")
 cat("Continuous LP solution (agent-equivalents):\n")
 show_table(bilingual_results[bilingual_results$agents > 1e-9, ])
+cat("Finance table: full-precision agents x shift cost; currency formatted only for display:\n")
+show_table(transform(bilingual_results,
+                     cost_per_agent = money(cost_per_agent), total_cost = money(total_cost)))
 cat("Rounded staffing table (slide 14):\n")
 show_table(bilingual_staffing_table)
 cat("E. ", bilingual_ft_total, " FT + ", bilingual_pt_total, " PT = ",
@@ -3572,6 +3265,7 @@ line_rule("SLIDE 17 - SCALE CONTEXT")
 show_table(scale_context_table)
 
 line_rule("SLIDE 18 - DEMAND GROWTH (H)")
+show_table(growth_sensitivity_table)
 show_table(data.frame(
   growth = growth_labels,
   calls_per_day = growth_results$calls_per_day,
@@ -3661,11 +3355,67 @@ note("Other limits: cost is the only goal (no service level); fixed 6 calls/",
      "routed to an agent who speaks the caller's language; bilinguals at full ",
      "speed in both languages; call time only.")
 
+line_rule("STAFFING PRECISION - SEPARATE DECK ROUNDING")
+staffing_precision_table <- rbind(
+  data.frame(scenario = "I", variable = names(baseline_solution),
+             unrounded = as.numeric(baseline_solution), deck_integer = as.numeric(baseline_rounded)),
+  data.frame(scenario = "II", variable = names(restricted_solution),
+             unrounded = as.numeric(restricted_solution), deck_integer = as.numeric(restricted_rounded)),
+  data.frame(scenario = "III", variable = names(bilingual_solution),
+             unrounded = as.numeric(bilingual_solution), deck_integer = as.numeric(bilingual_rounded))
+)
+show_table(staffing_precision_table)
+note("Only deck_integer is rounded (nearest integer, half up). Costs and derived calculations use unrounded values.")
+
+line_rule("SLIDES 11, 13, 15 - COST TABLE FOR DECK")
+show_table(data.frame(
+  Scenario = c("I", "II", "III"),
+  `Daily cost` = money(c(baseline_cost, restricted_cost, bilingual_cost)),
+  `Cost per call` = money(c(baseline_cost_per_call, restricted_cost_per_call, bilingual_cost_per_call)),
+  `FT English / bilingual` = money(c(baseline_breakdown["english_ft"], restricted_breakdown["english_ft"], bilingual_breakdown["full_time"])),
+  `FT Spanish` = c(money(baseline_breakdown["spanish_ft"]), money(restricted_breakdown["spanish_ft"]), "-"),
+  `PT English / bilingual` = money(c(baseline_breakdown["english_pt"], restricted_breakdown["english_pt"], bilingual_breakdown["part_time"])),
+  check.names = FALSE
+))
+
+line_rule("UNROUNDED COST BASIS")
+cat("Premium using lpSolve's unrounded objectives: ", format(max_bilingual_premium_pct, digits = 16), "%\n", sep = "")
+note("Professor Najafi, November 21, 2026: parts (a)-(g) use unrounded LP costs; part (g) is about 2%. Full-time shifts start on calls. Source: Gmail thread 1a1a4ae07554cf7a, message 1a1ff9f134ab0157.")
+lp_costs <- c(baseline_cost, restricted_cost, bilingual_cost)
+feasible <- function(x, mat, rhs, directions) {
+  residual <- as.numeric(mat %*% x[colnames(mat)]) - rhs
+  all(x >= -1e-7) && all(ifelse(directions == '>=', residual >= -1e-7, residual <= 1e-7))
+}
+checks <- c(
+  baseline_feasible = feasible(baseline_solution, constraint_matrix, constraint_rhs, constraint_directions),
+  restricted_feasible = feasible(restricted_solution, restricted_constraint_matrix, restricted_constraint_rhs, restricted_constraint_directions),
+  bilingual_feasible = feasible(bilingual_solution, bilingual_constraint_matrix, bilingual_constraint_rhs, bilingual_constraint_directions),
+  costs_use_fractional_staffing = max(abs(c(sum(baseline_results$total_cost),
+    sum(restricted_results$total_cost), sum(bilingual_results$total_cost)) - lp_costs)) < 1e-7,
+  first_english_shift = abs(baseline_solution['eng_ft_7am'] - 32/6) < 1e-9 &&
+    abs(baseline_results$total_cost[baseline_results$decision_variable == 'eng_ft_7am'] - 640) < 1e-7,
+  premium_uses_unrounded_costs = abs(max_bilingual_premium_pct - (baseline_cost / bilingual_cost - 1)*100) < 1e-12,
+  growth_scales_unrounded_cost = max(abs(growth_results$minimum_cost - baseline_cost*(1+growth_rates))) < 1e-7,
+  rounding_does_not_feed_finance = all(abs(rounding_audit$rounded_cost - lp_costs) > 1)
+)
+expected_charts <- c('06_demand_profile.png', '11_scenario_I_cost_breakdown.png',
+  '13_scenario_II_cost_breakdown.png', '15_scenario_cost_comparison.png',
+  '16_bilingual_wage_premium.png', '18_growth_sensitivity.png', '19_service_level_utilization.png')
+checks <- c(checks, only_visual_slide_charts = setequal(list.files(summary_png_dir, pattern = '\\.png$'), expected_charts))
+
+stopifnot(all(checks))
+line_rule("MODEL VALIDATION")
+print(checks)
+
 line_rule("DECK VALIDATION")
 print(deck_checks)
 cat("\nAll deck numbers reproduced: ", all(deck_checks), "\n", sep = "")
 
 sink()
+
+# Keep table alignment while removing trailing padding from the saved output.
+writeLines(sub("[[:blank:]]+$", "", readLines(summary_console_path)),
+           summary_console_path)
 
 options(old_width)
 

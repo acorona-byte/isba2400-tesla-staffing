@@ -1,0 +1,510 @@
+TESLA SUPPORT STAFFING - SUMMARY OUTPUT
+ISBA 2400 - DataTech Solutions recommendation deck
+Generated: 2026-11-21 18:01
+
+============================================================
+NUMBER RULES
+============================================================
+
+  Note: Daily costs, savings, cost per call, break-even premium, capacity and
+        utilization use the CONTINUOUS LP solution (lpSolve, all.int = FALSE).
+        Fractional agents are agent-equivalents, not people.
+  Note: Staffing tables are rounded to whole people shift by shift (nearest
+        person, .5 rounds up). The rounded schedule is a hiring guide only; its
+        cost is reported only in the rounding audit because it leaves blocks
+        short.
+  Note: Whole-person analyses (service-level buffer, mixed team) are labeled as
+        such and only compared with other whole-person figures.
+  Note: All dollar figures are shown with 2 decimals.
+  Note: Fractional staffing is NOT shortened to two decimals before
+        multiplication. For example, the first English shift uses 32 / 6 =
+        5.333333... agents; at $120 per shift its cost is exactly $640.00.
+        Dollar totals ending in .00 do not imply rounded staffing.
+
+============================================================
+SLIDE 2 - ANSWER KEY
+============================================================
+
+ Section What Alex asked                      Our answer                                     Slide
+ A       English-/Spanish-only hires by shift 31 FT (24 English, 7 Spanish) + 3 PT           10
+ B       English-/Spanish-only minimum cost   $4,625.00 per day                              11
+ C       Hires with 1 PM / 3 PM English cap   32 FT (25 English, 7 Spanish) + 3 PT           12
+ D       Minimum cost with the cap            $4,665.00 (+$40.00, +0.9%)                     13
+ E       Hires if every agent is bilingual    33 FT + 4 PT                                   14
+ F       Bilingual minimum cost               $4,525.00 (-$100.00, -2.2%)                    15
+ G       Max bilingual wage premium           2.2%                                           16
+ H       Cost if calls grow 10-30%            +30% calls: $6,012.50/day (+30%)               18
+ I       Cost of a service-level buffer       +4 hires, +$540.00/day: every block under 100% 19
+
+
+============================================================
+SLIDE 3 - RECOMMENDATION
+============================================================
+
+ Metric    Meaning                                                             Source
+ $4,525.00 Daily cost with one bilingual team, the lowest of all three plans   Scenario III, continuous LP (11C)
+ 4         Bilingual agents capture the full saving in a whole-person schedule Mixed-team model, whole people (13C)
+ 96.5%     Of capacity used, vs. 94.3% today                                   Continuous LP capacity (14E)
+ ~100%     Premium those few agents can earn and still break even              Mixed-team model, whole people (13C)
+
+  Note: Storyline: today's plan works on paper at current efficiency, but
+        separate English and Spanish queues leave idle capacity. Pooling
+        languages in one bilingual team covers the same 830 calls with less
+        paid capacity, and only a few bilingual seats are needed to capture the
+        savings, so the premium they can earn is high.
+
+============================================================
+SLIDE 4 - TESLA IN 2018 (FINANCIAL CONTEXT)
+============================================================
+
+ Metric             Value     Context
+ Model 3 deliveries 145,846   2018, first full year of volume production
+ Total revenue      $21.46B   2018
+ Revenue growth     +83%      vs. $11.76B in 2017
+ Net loss           -$976.09M 2018 full year
+ Q3 profit          $311.52M  2018 Q3
+ Q4 profit          $139.48M  2018 Q4
+
+Revenue growth: $21,461.27M / $11,758.75M - 1 = 82.5% (shown as 83%)
+  Note: External values for context only; not model inputs. Verify the
+        quarterly figures against the 10-K before submission.
+
+============================================================
+SLIDE 6 - DEMAND
+============================================================
+
+ block        calls_per_hour english_per_hour spanish_per_hour calls_per_block english_per_block spanish_per_block
+ 7 AM - 9 AM  40             32                8                80              64               16
+ 9 AM - 11 AM 85             68               17               170             136               34
+ 11 AM - 1 PM 70             56               14               140             112               28
+ 1 PM - 3 PM  95             76               19               190             152               38
+ 3 PM - 5 PM  80             64               16               160             128               32
+ 5 PM - 7 PM  35             28                7                70              56               14
+ 7 PM - 9 PM  10              8                2                20              16                4
+
+Daily calls: 830 (English 664, Spanish 166)
+Peak / quietest block: 95 / 10 = 9.5x
+  Note: Assumption: the 20% non-English share is Spanish, applied uniformly to
+        every block (case gives no block-level language mix).
+
+============================================================
+SLIDE 7 - OPERATING RULES
+============================================================
+
+ Hire option    7-9 AM 9-11 11-1 PM 1-3  3-5  5-7  7-9  Cost
+ FT start 7 AM  CALL   OFF  CALL    OFF                 $120.00
+ FT start 9 AM         CALL OFF     CALL OFF            $120.00
+ FT start 11 AM             CALL    OFF  CALL OFF       $120.00
+ FT start 1 PM                      CALL OFF  CALL OFF  $150.00
+ FT start 3 PM                           CALL OFF  CALL $150.00
+ PT start 3 PM                           CALL CALL      $150.00
+ PT start 5 PM                                CALL CALL $180.00
+
+  Note: Only call-handling time is paid in the model: $60.00 per 2-hour block
+        before 5 PM and $90.00 after. FT = CALL-OFF-CALL-OFF (always start on
+        calls); PT = 4 straight hours on calls, 3 PM or 5 PM start. Per the
+        professor, nobody works after 9 PM, so FT cannot start at 5 PM.
+
+============================================================
+SLIDES 8-9 - MODEL
+============================================================
+
+ Symbol Meaning                                    Values
+ Z      Total daily on-call salary cost            Minimize
+ T      Full-time start times                      7, 9, 11 AM - 1, 3 PM
+ K      Part-time start times                      3, 5 PM
+ E, S   English, Spanish full-timers starting at t Agents hired (>= 0, continuous)
+ P      English part-timers starting at k          Agents hired (>= 0, continuous)
+ c      Cost per hire, set by start time           $120.00 at 7, 9, 11 - $150.00 at 1, 3 - $180.00 at 5
+
+ Symbol Meaning                                       Values
+ r      Calls one agent handles per 2-hour block      12
+ d      Calls in block t                              80, 170, 140, 190, 160, 70, 20
+ s      Language share of calls                       English 0.8 - Spanish 0.2 - Bilingual 1.0
+ A(t)   Hires on calls during block t (grid, slide 7) 1-3 PM: the 9 AM and 1 PM starts
+ x      Agents hired                                  E, S, P or B >= 0, continuous
+
+
+============================================================
+SLIDES 10-11 - SCENARIO I: ENGLISH-ONLY + SPANISH-ONLY (A, B)
+============================================================
+
+Continuous LP solution (agent-equivalents):
+ decision_variable agents              cost_per_agent total_cost
+ eng_ft_7am         5.3333333333333339 120             640.00000000000011
+ eng_ft_9am        11.3333333333333339 120            1360.00000000000000
+ eng_ft_11am        6.0000000000000018 120             720.00000000000023
+ eng_ft_1pm         1.3333333333333330 150             199.99999999999994
+ eng_ft_3pm         1.3333333333333330 150             199.99999999999994
+ spa_ft_7am         1.3333333333333333 120             160.00000000000000
+ spa_ft_9am         2.8333333333333336 120             340.00000000000000
+ spa_ft_11am        2.3333333333333335 120             280.00000000000000
+ spa_ft_1pm         1.1666666666666667 150             175.00000000000000
+ spa_ft_3pm         0.3333333333333334 150              50.00000000000001
+ eng_pt_3pm         3.3333333333333330 150             499.99999999999994
+
+Finance table: full-precision agents x shift cost; currency formatted only for display:
+ decision_variable agents              cost_per_agent total_cost
+ eng_ft_7am         5.3333333333333339 $120.00        $640.00
+ eng_ft_9am        11.3333333333333339 $120.00        $1,360.00
+ eng_ft_11am        6.0000000000000018 $120.00        $720.00
+ eng_ft_1pm         1.3333333333333330 $150.00        $200.00
+ eng_ft_3pm         1.3333333333333330 $150.00        $200.00
+ spa_ft_7am         1.3333333333333333 $120.00        $160.00
+ spa_ft_9am         2.8333333333333336 $120.00        $340.00
+ spa_ft_11am        2.3333333333333335 $120.00        $280.00
+ spa_ft_1pm         1.1666666666666667 $150.00        $175.00
+ spa_ft_3pm         0.3333333333333334 $150.00        $50.00
+ eng_pt_3pm         3.3333333333333330 $150.00        $500.00
+ eng_pt_5pm         0.0000000000000000 $180.00        $0.00
+
+Rounded staffing table (slide 10):
+ Start FT English FT Spanish PT English
+ 7 AM   5         1          -
+ 9 AM  11         3          -
+ 11 AM  6         2          -
+ 1 PM   1         1          -
+ 3 PM   1         -          3
+ 5 PM  -          -          -
+ Total 24         7          3
+
+A. 31 FT (24 English, 7 Spanish) + 3 PT = 34 hires
+B. Minimum daily cost: $4,625.00
+   English FT $3,120.00 (67%) | Spanish FT $1,005.00 (22%) | English PT $500.00 (11%)
+   Agent-equivalents on calls: 36.667 | capacity: 36.667 x 24 = 880 calls | used: 830 / 880 = 94.3% | idle: 50 calls
+   Cost per call: $4,625.00 / 830 = $5.57
+
+============================================================
+SLIDES 12-13 - SCENARIO II: ENGLISH START LIMIT (C, D)
+============================================================
+
+Continuous LP solution (agent-equivalents):
+ decision_variable agents              cost_per_agent total_cost
+ eng_ft_7am         5.3333333333333339 120             640.00000000000011
+ eng_ft_9am        11.6666666666666679 120            1400.00000000000023
+ eng_ft_11am        6.3333333333333339 120             760.00000000000011
+ eng_ft_1pm         1.0000000000000000 150             150.00000000000000
+ eng_ft_3pm         1.0000000000000000 150             150.00000000000000
+ spa_ft_7am         1.3333333333333333 120             160.00000000000000
+ spa_ft_9am         2.8333333333333336 120             340.00000000000000
+ spa_ft_11am        2.3333333333333335 120             280.00000000000000
+ spa_ft_1pm         1.1666666666666667 150             175.00000000000000
+ spa_ft_3pm         0.3333333333333334 150              50.00000000000001
+ eng_pt_3pm         3.3333333333333330 150             499.99999999999994
+ eng_pt_5pm         0.3333333333333332 180              59.99999999999998
+
+Finance table: full-precision agents x shift cost; currency formatted only for display:
+ decision_variable agents              cost_per_agent total_cost
+ eng_ft_7am         5.3333333333333339 $120.00        $640.00
+ eng_ft_9am        11.6666666666666679 $120.00        $1,400.00
+ eng_ft_11am        6.3333333333333339 $120.00        $760.00
+ eng_ft_1pm         1.0000000000000000 $150.00        $150.00
+ eng_ft_3pm         1.0000000000000000 $150.00        $150.00
+ spa_ft_7am         1.3333333333333333 $120.00        $160.00
+ spa_ft_9am         2.8333333333333336 $120.00        $340.00
+ spa_ft_11am        2.3333333333333335 $120.00        $280.00
+ spa_ft_1pm         1.1666666666666667 $150.00        $175.00
+ spa_ft_3pm         0.3333333333333334 $150.00        $50.00
+ eng_pt_3pm         3.3333333333333330 $150.00        $500.00
+ eng_pt_5pm         0.3333333333333332 $180.00        $60.00
+
+Rounded staffing table (slide 12):
+ Start FT English FT Spanish PT English
+ 7 AM   5         1          -
+ 9 AM  12         3          -
+ 11 AM  6         2          -
+ 1 PM   1         1          -
+ 3 PM   1         -          3
+ 5 PM  -          -          -
+ Total 25         7          3
+
+C. 32 FT (25 English, 7 Spanish) + 3 PT = 35 hires
+D. Minimum daily cost: $4,665.00 (+$40.00, +0.9% vs. Scenario I)
+   English FT $3,100.00 (66%) | Spanish FT $1,005.00 (22%) | English PT $560.00 (12%)
+   Agent-equivalents: 37 | capacity: 888 calls | used: 93.5% | idle: 58 calls | per call: $5.62
+  Note: Demand didn't change; flexibility did. Capping late English starts at 1
+        per start time forces extra 9 and 11 AM coverage and part of a $180.00
+        5 PM part-timer. Contingency plan only.
+
+============================================================
+SLIDES 14-15 - SCENARIO III: BILINGUAL TEAM (E, F)
+============================================================
+
+Continuous LP solution (agent-equivalents):
+ decision_variable agents             cost_per_agent total_cost
+ bil_ft_7am         6.666666666666668 120             800.0000000000001
+ bil_ft_9am        14.166666666666670 120            1700.0000000000005
+ bil_ft_11am        7.500000000000003 120             900.0000000000003
+ bil_ft_1pm         1.666666666666668 150             250.0000000000001
+ bil_ft_3pm         1.666666666666666 150             250.0000000000000
+ bil_pt_3pm         4.166666666666664 150             624.9999999999997
+
+Finance table: full-precision agents x shift cost; currency formatted only for display:
+ decision_variable agents             cost_per_agent total_cost
+ bil_ft_7am         6.666666666666668 $120.00        $800.00
+ bil_ft_9am        14.166666666666670 $120.00        $1,700.00
+ bil_ft_11am        7.500000000000003 $120.00        $900.00
+ bil_ft_1pm         1.666666666666668 $150.00        $250.00
+ bil_ft_3pm         1.666666666666666 $150.00        $250.00
+ bil_pt_3pm         4.166666666666664 $150.00        $625.00
+ bil_pt_5pm         0.000000000000000 $180.00        $0.00
+
+Rounded staffing table (slide 14):
+ Start FT bilingual PT bilingual
+ 7 AM   7           -
+ 9 AM  14           -
+ 11 AM  8           -
+ 1 PM   2           -
+ 3 PM   2           4
+ 5 PM  -            -
+ Total 33           4
+
+E. 33 FT + 4 PT = 37 hires
+F. Minimum daily cost: $4,525.00 (-$100.00, -2.2% vs. Scenario I; -$140.00, -3.0% vs. Scenario II)
+   Full-time $3,900.00 + part-time $625.00
+   Agent-equivalents: 35.833 | capacity: 860.0000000000002 calls | used: 96.5% | idle: 30.00000000000023 calls | per call: $5.45
+  Note: Any agent can take any caller, so the model staffs to total demand
+        instead of two separate queues. Bilingual agents are paid the same base
+        wage in this scenario. Rounded, the bilingual team has 3 more people
+        than Scenario I but still costs less in the continuous model.
+
+============================================================
+SLIDE 16 - BILINGUAL WAGE PREMIUM (G)
+============================================================
+
+G. Break-even premium = $4,625.00 / $4,525.00 - 1 = 2.21% (shown as 2.2%)
+   Pay cap: $30.00 x 1.0221 = $30.66 before 5 PM; $45.00 x 1.0221 = $45.99 after 5 PM
+  Note: Premium applied uniformly to every bilingual agent and both wage rates.
+        Because the bilingual staffing is unchanged by a uniform premium, cost
+        scales linearly: $4,525.00 x (1 + p).
+
+============================================================
+APPENDIX A1 - CONTINUOUS UTILIZATION BY BLOCK
+============================================================
+
+ block        II     I      III
+ 7 AM - 9 AM  100.0% 100.0% 100.0%
+ 9 AM - 11 AM 97.7%  100.0% 100.0%
+ 11 AM - 1 PM 76.1%  77.8%  82.4%
+ 1 PM - 3 PM  95.0%  95.0%  100.0%
+ 3 PM - 5 PM  100.0% 100.0% 100.0%
+ 5 PM - 7 PM  100.0% 100.0% 100.0%
+ 7 PM - 9 PM  100.0% 100.0% 100.0%
+
+Average: II 93.5% | I 94.3% | III 96.5%
+Slowest block: II 76.1% | I 77.8% | III 82.4%
+  Note: Utilization = calls / capacity, where capacity = agents on calls x 12.
+        One shared queue spreads the work more evenly: even its slowest block
+        stays busier, so fewer paid agents sit idle.
+
+============================================================
+SLIDE 17 - SCALE CONTEXT
+============================================================
+
+ Metric                       2017 / early 2018 2018 / year-end Growth
+ Vehicle deliveries           103,122           245,240         +138%
+ Annualized delivery run rate ~120,000          350,000+        +192%
+ Automotive sales revenue     $8.53B            $17.63B         +107%
+
+
+============================================================
+SLIDE 18 - DEMAND GROWTH (H)
+============================================================
+
+ Growth Calls/day FT + PT Daily cost
+ Today    830     31 + 3  $4,625.00
+ +10%     913     35 + 4  $5,087.50
+ +20%     996     40 + 4  $5,550.00
+ +30%   1,079     45 + 4  $6,012.50
+
+ growth calls_per_day      ft_rounded pt_rounded ft_continuous pt_continuous daily_cost cost_change cost_per_call
+ Today   830.0000000000000 31         3          33.333        3.333         $4,625.00  +0.0%       $5.57
+ +10%    913.0000000000001 35         4          36.667        3.667         $5,087.50  +10.0%      $5.57
+ +20%    996.0000000000000 40         4          40.000        4.000         $5,550.00  +20.0%      $5.57
+ +30%   1079.0000000000000 45         4          43.333        4.333         $6,012.50  +30.0%      $5.57
+
+H. +30% calls: $6,012.50/day (+30.0%)
+  Note: Scenario I structure. Every demand constraint scales by the same
+        factor, so the continuous LP cost scales exactly with demand and cost
+        per call stays $5.57. Headcount is rounded shift by shift at each
+        growth level. Sensitivity test, not a forecast.
+
+============================================================
+SLIDE 19 - SERVICE-LEVEL BUFFER (I)
+============================================================
+
+ Block Required Staffed Today  +1 agent With 4 hires Spanish Bilingual
+ 7-9   5.33      5      106.7% 88.9%    88.9%        133.3%  95.2%
+ 9-11  11.33    11      103.0% 94.4%    94.4%        94.4%   101.2%
+ 11-1  9.33     11      84.8%  -        77.8%        77.8%   77.8%
+ 1-3   12.67    12      105.6% 97.4%    90.5%        79.2%   99.0%
+ 3-5   10.67    10      106.7% 97.0%    97.0%        133.3%  95.2%
+ 5-7   4.67      4      116.7% 93.3%    93.3%        116.7%  97.2%
+ 7-9   1.33      1      133.3% 66.7%    66.7%        -       83.3%
+
+English blocks over 100%: Scenario I 6 of 7 | Scenario II 4 of 7 | bilingual 1 of 7
+I. Buffer: +1 English FT at 7 AM, 9 AM, 1 PM and 3 PM = $120.00 + $120.00 + $150.00 + $150.00 = +$540.00/day
+  Note: Utilization here = required headcount (calls / 12, continuous) /
+        staffed headcount (rounded schedule). Example 7-9 AM: 5.33 / 5 =
+        106.7%. The +1 bars are block-by-block what-ifs; the 4 hires are the
+        real schedule fix (they also add one agent at 11-1 and a second at
+        1-3). The 85% line is a planning target, not a case rule.
+
+============================================================
+SLIDE 20 - RECOMMENDED PLAN
+============================================================
+
+ Start Bilingual full-time Bilingual part-time First bilingual seats
+ 7 AM   7                  -                   1 FT
+ 9 AM  14                  -                   -
+ 11 AM  8                  -                   -
+ 1 PM   2                  -                   1 FT
+ 3 PM   2                  4                   1 FT + 1 PT
+
+
+============================================================
+APPENDIX A2 - MIXED TEAM (WHOLE PEOPLE)
+============================================================
+
+ bilingual_agents whole_person_cost saving_vs_none
+ 0                $5,100.00         $0.00
+ 1                $4,950.00         $150.00
+ 2                $4,830.00         $270.00
+ 3                $4,710.00         $390.00
+ 4                $4,680.00         $420.00
+ 5                $4,680.00         $420.00
+ 6                $4,680.00         $420.00
+
+Lowest-cost bilingual seats: bil_ft_7am = 1, bil_ft_1pm = 1, bil_ft_3pm = 1, bil_pt_3pm = 1
+Daily saving with 4 bilingual agents: $5,100.00 - $4,680.00 = $420.00
+Break-even premium for those agents: 100.0% (shown as ~100%)
+  Note: Integer (whole-person) model: English-only + Spanish-only staff plus up
+        to k bilingual hires who can cover either queue. Whole-person costs are
+        higher than continuous LP costs and are compared only with each other.
+        Compare the ~100% premium room for a few seats with 2.2% if everyone is
+        bilingual (slide 16).
+
+============================================================
+SLIDE 21 - BUSINESS CASE
+============================================================
+
+ Metric                           Value                  Calculation
+ Saved per year, continuous model $26,000.00             $100.00 x 260 weekdays
+ Saved per year, whole people     $109,200.00            $420.00 x 260, from just 4 bilingual agents
+ Cost per call                    $5.45                  Down from $5.57 (-2.2%)
+ Less unused capacity a day       19.9999999999998 calls 880 vs. 860 calls of capacity = 3.3 paid hours
+
+Annual savings vs. Scenario II: $140.00 x 260 = $36,400.00
+Cost per call: $5.57 -> $5.45 (2.2% less per call)
+On-call hours: 880 / 6 = 146.7 vs. 860.0000000000002 / 6 = 143.3 (3.3 fewer)
+  Note: Our extrapolation: 260 weekdays/year, on-call salary only; excludes
+        benefits, recruiting and training.
+
+============================================================
+SLIDE 22 - BEYOND THE MODEL
+============================================================
+
+ Illustrative lever              Model link
+ Answer it on delivery day       12 calls avoided in a block = 1 less agent
+ Move service to the app         A lighter 1-3 PM peak shrinks the 9 AM group
+ Train for first-call resolution 6 -> 7 calls an hour = 17% more capacity, same team
+ Turn calls into upgrades        New KPI: upgrades per 100 calls
+
+Handling rate 6 -> 7 calls/hour: +16.7% capacity
+
+============================================================
+SLIDE 24 - LIMITS / ROUNDING AUDIT
+============================================================
+
+ scenario continuous_cost rounded_cost constraints_short feasible
+ I        $4,625.00       $4,260.00    10                FALSE
+ II       $4,665.00       $4,380.00     8                FALSE
+ III      $4,525.00       $4,680.00     1                FALSE
+
+  Note: Every rounded schedule misses at least one block. Rounded I and II even
+        look cheaper than the continuous optimum, but only because they leave
+        blocks short. That is why the deck reports continuous costs and treats
+        rounded headcount as a hiring guide.
+  Note: Other limits: cost is the only goal (no service level); fixed 6
+        calls/hour; average weekday demand; flat 80/20 mix; set rotations;
+        calls routed to an agent who speaks the caller's language; bilinguals
+        at full speed in both languages; call time only.
+
+============================================================
+STAFFING PRECISION - SEPARATE DECK ROUNDING
+============================================================
+
+ scenario variable    unrounded           deck_integer
+ I        eng_ft_7am   5.3333333333333339  5
+ I        eng_ft_9am  11.3333333333333339 11
+ I        eng_ft_11am  6.0000000000000018  6
+ I        eng_ft_1pm   1.3333333333333330  1
+ I        eng_ft_3pm   1.3333333333333330  1
+ I        spa_ft_7am   1.3333333333333333  1
+ I        spa_ft_9am   2.8333333333333336  3
+ I        spa_ft_11am  2.3333333333333335  2
+ I        spa_ft_1pm   1.1666666666666667  1
+ I        spa_ft_3pm   0.3333333333333334  0
+ I        eng_pt_3pm   3.3333333333333330  3
+ I        eng_pt_5pm   0.0000000000000000  0
+ II       eng_ft_7am   5.3333333333333339  5
+ II       eng_ft_9am  11.6666666666666679 12
+ II       eng_ft_11am  6.3333333333333339  6
+ II       eng_ft_1pm   1.0000000000000000  1
+ II       eng_ft_3pm   1.0000000000000000  1
+ II       spa_ft_7am   1.3333333333333333  1
+ II       spa_ft_9am   2.8333333333333336  3
+ II       spa_ft_11am  2.3333333333333335  2
+ II       spa_ft_1pm   1.1666666666666667  1
+ II       spa_ft_3pm   0.3333333333333334  0
+ II       eng_pt_3pm   3.3333333333333330  3
+ II       eng_pt_5pm   0.3333333333333332  0
+ III      bil_ft_7am   6.6666666666666679  7
+ III      bil_ft_9am  14.1666666666666696 14
+ III      bil_ft_11am  7.5000000000000027  8
+ III      bil_ft_1pm   1.6666666666666677  2
+ III      bil_ft_3pm   1.6666666666666663  2
+ III      bil_pt_3pm   4.1666666666666643  4
+ III      bil_pt_5pm   0.0000000000000000  0
+
+  Note: Only deck_integer is rounded (nearest integer, half up). Costs and
+        derived calculations use unrounded values.
+
+============================================================
+SLIDES 11, 13, 15 - COST TABLE FOR DECK
+============================================================
+
+ Scenario Daily cost Cost per call FT English / bilingual FT Spanish PT English / bilingual
+ I        $4,625.00  $5.57         $3,120.00              $1,005.00  $500.00
+ II       $4,665.00  $5.62         $3,100.00              $1,005.00  $560.00
+ III      $4,525.00  $5.45         $3,900.00              -          $625.00
+
+
+============================================================
+UNROUNDED COST BASIS
+============================================================
+
+Premium using lpSolve's unrounded objectives: 2.20994475138121%
+  Note: Professor Najafi, November 21, 2026: parts (a)-(g) use unrounded LP
+        costs; part (g) is about 2%. Full-time shifts start on calls. Source:
+        Gmail thread 1a1a4ae07554cf7a, message 1a1ff9f134ab0157.
+
+============================================================
+MODEL VALIDATION
+============================================================
+
+             baseline_feasible            restricted_feasible             bilingual_feasible  costs_use_fractional_staffing            first_english_shift
+                          TRUE                           TRUE                           TRUE                           TRUE                           TRUE
+  premium_uses_unrounded_costs   growth_scales_unrounded_cost rounding_does_not_feed_finance       only_visual_slide_charts
+                          TRUE                           TRUE                           TRUE                           TRUE
+
+============================================================
+DECK VALIDATION
+============================================================
+
+       baseline_cost      restricted_cost       bilingual_cost              premium   baseline_headcount restricted_headcount  bilingual_headcount            growth_30
+                TRUE                 TRUE                 TRUE                 TRUE                 TRUE                 TRUE                 TRUE                 TRUE
+              buffer          utilization           mixed_team
+                TRUE                 TRUE                 TRUE
+
+All deck numbers reproduced: TRUE
